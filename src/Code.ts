@@ -142,7 +142,7 @@ function makePassphrase(seeds: string): string {
 }
 
 function createConfigureView(userID: string = '') {
-  const view = {
+  let view = {
     "type": "modal",
     "title": {
       "type": "plain_text",
@@ -207,8 +207,8 @@ function createConfigureView(userID: string = '') {
       "type": "section",
       "block_id": "reset",
       "text": {
-        type: "plain_text",
-        text: "パスワードを更新します。\n削除する場合はResetを押してください。"
+        "type": "plain_text",
+        "text": "パスワードを更新します。\n削除する場合はResetを押してください。"
       },
       "accessory": {
         "type": "button",
