@@ -13,11 +13,14 @@ REQUIREMENTS
 - [clasp](https://github.com/google/clasp)  
 `npm install -g @google/clasp`
 - `make`
+- GAS Library
+  - cCryptoGS
+  - OAuth2
 
 USAGE
 --------------------
 
-To use it, you need to set up Google apps scripts, Custom Search API and Slack API.
+To use it, you need to set up Google apps scripts, and Slack API.
 
 ### Install Google apps scripts
 
