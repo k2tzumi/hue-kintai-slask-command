@@ -1,0 +1,32 @@
+{
+  "name": "hue-kintai-slask-command",
+  "version": "0.0.1",
+  "description": "",
+  "private": true,
+  "main": "src/Code.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "tslint --fix src/*.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/k2tzumi/hue-kintai-slask-command.git"
+  },
+  "author": "k2tzumi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/k2tzumi/hue-kintai-slask-command/issues"
+  },
+  "homepage": "https://github.com/k2tzumi/hue-kintai-slask-command#readme",
+  "devDependencies": {
+    "@google/clasp": "^2.3.0",
+    "prettier": "^1.19.1",
+    "tslint": "^6.1.2",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.3.0"
+  },
+  "dependencies": {
+    "@types/google-apps-script": "^1.0.14",
+    "apps-script-oauth2": "github:gsuitedevs/apps-script-oauth2"
+  }
+}
