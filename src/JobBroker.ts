@@ -40,7 +40,7 @@ class JobBroker {
         };
 
         this.saveJob(newTrigger, jobParameter);
-        console.info(`job enqueued. id: ${jobParameter.id}, created_at: ${jobParameter.created_at}, parameter: ${jobParameter.parameter}`);
+        console.info(`job enqueued. id: ${jobParameter.id}, handler: ${newTrigger.getHandlerFunction()}, created_at: ${jobParameter.created_at}, parameter: ${jobParameter.parameter}`);
     }
 
     public dequeue(): { job: JobParameter; trigger: Trigger } | null {
@@ -61,18 +61,18 @@ class JobBroker {
                         if (new Date().getTime() - jobParameter.start_at > JobBroker.JOB_TIME_OUT) {
                             ScriptApp.deleteTrigger(trigger);
                             this.deleteJob(trigger);
-                            console.info(`job time out. id: ${jobParameter.id}, created_at: ${jobParameter.created_at}, start_at: ${jobParameter.start_at}, parameter: ${jobParameter.parameter}`);
+                            console.info(`job time out. id: ${jobParameter.id}, handler: ${trigger.getHandlerFunction()}, created_at: ${jobParameter.created_at}, start_at: ${jobParameter.start_at}, parameter: ${jobParameter.parameter}`);
                         }
                         break;
                     case 'end':
                     default:
                         ScriptApp.deleteTrigger(trigger);
                         this.deleteJob(trigger);
-                        console.info(`job clear. id: ${jobParameter.id}, created_at: ${jobParameter.created_at}, start_at: ${jobParameter.start_at}, end_at: ${jobParameter.end_at}, parameter: ${jobParameter.parameter}`);
+                        console.info(`job clear. id: ${jobParameter.id}, handler: ${trigger.getHandlerFunction()}, created_at: ${jobParameter.created_at}, start_at: ${jobParameter.start_at}, end_at: ${jobParameter.end_at}, parameter: ${jobParameter.parameter}`);
                         break;
                 }
             } else {
-                console.info(`delete trigger. id: ${trigger.getUniqueId}, handler: ${trigger.getHandlerFunction}`);
+                console.info(`delete trigger. id: ${trigger.getUniqueId()}, handler: ${trigger.getHandlerFunction()}`);
                 ScriptApp.deleteTrigger(trigger);
             }
         }
