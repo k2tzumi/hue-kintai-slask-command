@@ -268,6 +268,8 @@ function executeViewSubmission(viewSubmission: ViewSubmission): TextOutput {
       );
     }
   } catch (e) {
+    new JobBroker().enqueue('asyncLogging', { message: e.message, stack: e.stack });
+
     const failure = {
       "response_action": "update",
       "view": createCredentialModal(`executeViewSubmission failure.\nname: ${e.name}\nmessage: ${e.message}\nstack: ${e.stack}`)
