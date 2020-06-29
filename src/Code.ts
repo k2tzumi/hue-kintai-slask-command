@@ -108,13 +108,13 @@ function executeSlashCommand(commands: Commands): TextOutput {
       case 'start':
         new JobBroker().enqueue('executeStartKintai', commands);
         response.response_type = 'in_channel';
-        response.text = `@${commands.user_name}\nおはようございます。出勤打刻します。`;
+        response.text = `<@${commands.user_id}>\nおはようございます。出勤打刻します。`;
         break;
       case 'e':
       case 'end':
         new JobBroker().enqueue('executeEndKintai', commands);
         response.response_type = 'in_channel';
-        response.text = `@${commands.user_name}\nおつかれさまでした。退勤打刻しますß。`;
+        response.text = `<@${commands.user_id}>\nおつかれさまでした。退勤打刻しますß。`;
         break;
       case 'config':
         slackClient.openViews(createConfigureView(credential.userID), commands.trigger_id);
@@ -364,7 +364,7 @@ function executeStartKintai(): void {
     const startMessage = hueClient.doLogin(credential).punchIn(HueClient.START_SUBMIT);
 
     const webhook: SlackWebhooks = new SlackWebhooks(commands.response_url);
-    webhook.invoke(`@${commands.user_name}\n${startMessage}`);
+    webhook.invoke(`<@${commands.user_id}>\n${startMessage}`);
   });
 }
 
@@ -380,7 +380,7 @@ function executeEndKintai(): void {
     const endMessage = hueClient.doLogin(credential).punchIn(HueClient.END_SUBMIT);
 
     const webhook: SlackWebhooks = new SlackWebhooks(commands.response_url);
-    webhook.invoke(`@${commands.user_name}\n${endMessage}`);
+    webhook.invoke(`<@${commands.user_id}>\n${endMessage}`);
   });
 }
 
