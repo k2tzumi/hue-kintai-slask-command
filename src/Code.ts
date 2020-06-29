@@ -114,7 +114,7 @@ function executeSlashCommand(commands: Commands): TextOutput {
       case 'end':
         new JobBroker().enqueue('executeEndKintai', commands);
         response.response_type = 'in_channel';
-        response.text = `<@${commands.user_id}>\nおつかれさまでした。退勤打刻しますß。`;
+        response.text = `<@${commands.user_id}>\nおつかれさまでした。退勤打刻します。`;
         break;
       case 'config':
         slackClient.openViews(createConfigureView(credential.userID), commands.trigger_id);
