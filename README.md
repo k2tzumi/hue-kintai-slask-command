@@ -87,11 +87,19 @@ The following message is displayed when OAuth authentication is successful
 Success!
 Setting EventSubscriptions
 Setting Slash Commands
+Setting Interactivity & Shortcuts
 ```
-When prompted, click the `Setting EventSubscriptions` to set up an Event Subscriptions.
+When prompted, click the `Setting Slash Commands` to set up an Slash Commands.  
+Thes click the `Setting Interactivity & Shortcuts` to set up an Interactivity.  
 
 ### Settings Slash Commands
 
 * Create New Command  
-Setting Request URL.
+Setting Request URL.  
 ex) https://script.google.com/macros/s/miserarenaiyo/exec  
+
+### Setting Interactivity & Shortcuts
+
+Turn on.  
+Setting Interactivity Request URL  
+ex) https://script.google.com/macros/s/miserarenaiyo/exec
