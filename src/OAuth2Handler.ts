@@ -85,9 +85,15 @@ class OAuth2Handler {
     }
 
     private createAuthenSuccessHtml(): HtmlOutput {
-        const template = HtmlService.createTemplate('Success!<br /><a href="<?= eventSubscriptionsUrl ?>" target="_blank">Setting EventSubscriptions</a><br /><a href="<?= slashCommnadsUrl ?>" target="_blank" >Setting Slash Commands</a>');
+        const template = HtmlService.createTemplate(`
+        Success!<br />
+        <a href="<?= eventSubscriptionsUrl ?>" target="_blank">Setting EventSubscriptions</a><br />
+        <a href="<?= slashCommnadsUrl ?>" target="_blank" >Setting Slash Commands</a><br />
+        <a href="<?= interactiveMessagesUrl ?>" target="_blank" >Setting Interactivity & Shortcuts</a><br />
+        `);
         template.eventSubscriptionsUrl = this.eventSubscriptionsUrl;
         template.slashCommnadsUrl = this.slashCommnadsUrl;
+        template.interactiveMessagesUrl = this.interactiveMessagesUrl;
 
         return HtmlService.createHtmlOutput(template.evaluate());
     }
@@ -146,6 +152,13 @@ class OAuth2Handler {
     private get slashCommnadsUrl(): string | null {
         if (this.oAuthAccess) {
             return `https://api.slack.com/apps/${this.oAuthAccess.app_id}/slash-commands?`
+        }
+        return null;
+    }
+
+    private get interactiveMessagesUrl(): string | null {
+        if (this.oAuthAccess) {
+            return `https://api.slack.com/apps/${this.oAuthAccess.app_id}/interactive-messages?`
         }
         return null;
     }
