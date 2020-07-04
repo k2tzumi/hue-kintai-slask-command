@@ -1,15 +1,22 @@
 import { OAuth2 } from "apps-script-oauth2/src/OAuth2";
 import { Service } from "apps-script-oauth2/src/Service";
 import { OauthAccess } from "./OauthAccess";
-import { TokenPayload } from "./TokenPayload";
 
 type Properties = GoogleAppsScript.Properties.Properties;
 type HtmlOutput = GoogleAppsScript.HTML.HtmlOutput;
 type URLFetchRequestOptions = GoogleAppsScript.URL_Fetch.URLFetchRequestOptions;
 
+export interface TokenPayload {
+    code: string;
+    client_id: string;
+    client_secret: string;
+    redirect_uri: string;
+    grant_type: string;
+}
+
 class OAuth2Handler {
 
-    static readonly SCOPE = 'commands,chat:write,reactions:write';
+    static readonly SCOPE = 'commands,chat:write,reactions:write,app_mentions:read';
 
     private service: Service;
 

@@ -70,6 +70,8 @@ Click `Add an OAuth Scope` to select the following permissions
   * [chat:write](https://api.slack.com/scopes/chat:write)
   * [commands](https://api.slack.com/scopes/commands)
   * [reactions:write](https://api.slack.com/scopes/reactions:write)
+  * [app_mentions:read](https://api.slack.com/scopes/app_mentions:read)
+
 * Install App to Workspace  
 You must specify a destination channel that bot can post to as an app.
 
@@ -91,6 +93,7 @@ Setting Interactivity & Shortcuts
 ```
 When prompted, click the `Setting Slash Commands` to set up an Slash Commands.  
 Thes click the `Setting Interactivity & Shortcuts` to set up an Interactivity.  
+Thes click the `Setting EventSubscriptions` to set up an Event Subscriptions.  
 
 ### Settings Slash Commands
 
@@ -103,3 +106,10 @@ ex) https://script.google.com/macros/s/miserarenaiyo/exec
 Turn on.  
 Setting Interactivity Request URL  
 ex) https://script.google.com/macros/s/miserarenaiyo/exec
+
+### Setting Event Subscriptions  
+Turn on.  
+Setting Request URL.  
+ex) https://script.google.com/macros/s/miserarenaiyo/exec  
+Add Workspace Event.   
+Select `app_mention`.

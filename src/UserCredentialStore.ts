@@ -8,7 +8,8 @@ interface UserCredential {
 class UserCredentialStore {
     private cipher;
 
-    public constructor(private propertyStore: Properties, private passphrase: string) {
+    public constructor(private propertyStore: Properties, private passphraseSeeds: string) {
+        const passphrase = this.makePassphrase(passphraseSeeds);
         this.cipher = new cCryptoGS.Cipher(passphrase, 'aes');
     }
 
@@ -36,6 +37,14 @@ class UserCredentialStore {
 
     public removeUserCredential(id: string): void {
         this.propertyStore.deleteProperty(id);
+    }
+
+    private makePassphrase(seeds: string): string {
+        const digest: number[] = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1,
+            seeds,
+            Utilities.Charset.US_ASCII);
+
+        return digest.map(function (b) { return ('0' + (b < 0 && b + 256 || b).toString(16)).substr(-2) }).join('');
     }
 }
 

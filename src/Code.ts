@@ -7,6 +7,8 @@ import { HueClient } from "./HueClient";
 import { JobBroker } from "./JobBroker"
 import { SlackWebhooks } from "./SlackWebhooks";
 import { BlockActions } from "./BlockActions";
+import { AppMentionEvent } from "./AppMentionEvent";
+import { SlackHandler } from "./SlackHandler";
 
 type TextOutput = GoogleAppsScript.Content.TextOutput
 type HtmlOutput = GoogleAppsScript.HTML.HtmlOutput;
@@ -46,53 +48,48 @@ function getRequestURL() {
   return serviceURL.replace('/dev', '/exec');
 }
 
-function handleCallback(request): HtmlOutput {
+const handleCallback = function (request): HtmlOutput {
   return handler.authCallback(request);
 }
 
+const asyncLogging = function (): void {
+  const jobBroker: JobBroker = new JobBroker();
+  jobBroker.consumeJob((parameter: {}) => {
+    console.info(JSON.stringify(parameter));
+  });
+}
+
+const VERIFICATION_TOKEN: string = properties.getProperty('VERIFICATION_TOKEN');
+const COMMAND = '/kintai';
+
 function doPost(e): TextOutput {
-  const { token, command, payload } = e.parameter;
+  const slackHandler = new SlackHandler(VERIFICATION_TOKEN);
 
-  if (command) {
-    validateVerificationToken(token);
+  slackHandler.addCommandListener(COMMAND, executeSlashCommand);
+  slackHandler.addInteractivityListener('view_submission', executeViewSubmission);
+  slackHandler.addInteractivityListener('block_actions', executeBlockActions);
+  slackHandler.addCallbackEventListener('app_mention', executeAppMentionEvent);
 
-    return executeSlashCommand(e.parameter);
-  }
+  try {
+    const process = slackHandler.handle(e);
 
-  if (payload) {
-    const request = JSON.parse(payload);
-
-    validateVerificationToken(request.token);
-
-    switch (request.type) {
-      case 'view_submission':
-        return executeViewSubmission(request);
-      case 'block_actions':
-        return executeBlockActions(request);
-      default:
-        throw new Error("Unkonw request.");
+    if (process.performed) {
+      return process.output;
     }
+  } catch (exception) {
+    new JobBroker().enqueue(asyncLogging, { message: exception.message, stack: exception.stack });
   }
 
-  throw new Error("Unkonw request.");
+  throw new Error("No performed handler");
 }
 
-const VERIFICATION_TOKEN: string = properties.getProperty("VERIFICATION_TOKEN");
-
-function validateVerificationToken(token: string | null): void {
-  if (token !== VERIFICATION_TOKEN) {
-    console.warn("Invalid verification toekn: %s", token);
-    throw new Error("Invalid verification token.");
-  }
-}
-
-function executeSlashCommand(commands: Commands): TextOutput {
-  const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphrase(commands.user_id));
+const executeSlashCommand = function (commands: Commands): { response_type: string; text: string; } | null {
+  const store = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphraseSeeds(commands.user_id));
   const credential: UserCredential = store.getUserCredential(commands.user_id);
 
   let response = {
-    "response_type": null,
-    "text": null
+    response_type: null,
+    text: null
   };
 
   const slackClient = new SlackClient(handler.token);
@@ -101,109 +98,90 @@ function executeSlashCommand(commands: Commands): TextOutput {
     slackClient.openViews(createConfigureView(), commands.trigger_id);
 
     response.response_type = 'ephemeral';
-    response.text = "Not exists credential.";
+    response.text = 'Not exists credential.';
   } else {
     switch (commands.text) {
       case 's':
       case 'start':
-        new JobBroker().enqueue('executeStartKintai', commands);
+        new JobBroker().enqueue(executeCommandStartKintai, commands);
         response.response_type = 'in_channel';
         response.text = `<@${commands.user_id}>\nおはようございます。出勤打刻します。`;
         break;
       case 'e':
       case 'end':
-        new JobBroker().enqueue('executeEndKintai', commands);
+        new JobBroker().enqueue(executeCommandEndKintai, commands);
         response.response_type = 'in_channel';
         response.text = `<@${commands.user_id}>\nおつかれさまでした。退勤打刻します。`;
         break;
       case 'config':
         slackClient.openViews(createConfigureView(credential.userID), commands.trigger_id);
 
-        return ContentService.createTextOutput('');
+        return null;
       case 'help':
       default:
         response.response_type = 'ephemeral';
-        response.text = "*Usage*\n* /kintai [s|start]\n* /kintai [e|end]\n* /kintai config\n* /kintai help";
+        response.text = `*Usage*\n* ${COMMAND} [s|start]\n* ${COMMAND} [e|end]\n* ${COMMAND} config\n* ${COMMAND} help`;
         break;
     }
   }
 
-  return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(
-    ContentService.MimeType.JSON
-  );
+  return response;
 }
 
-function makePassphrase(seeds: string): string {
-  const digest: number[] = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1,
-    CLIENT_ID + seeds + CLIENT_SECRET,
-    Utilities.Charset.US_ASCII);
-
-  return digest.map(function (b) { return ("0" + (b < 0 && b + 256 || b).toString(16)).substr(-2) }).join("");
+function makePassphraseSeeds(user_id: string): string {
+  return CLIENT_ID + user_id + CLIENT_SECRET;
 }
 
-function createConfigureView(userID: string = '') {
-  let view = {
-    "type": "modal",
-    "title": {
-      "type": "plain_text",
-      "text": "Setting HUE Credential.",
-    },
-    "callback_id": "save-credential",
-    "submit": {
-      "type": "plain_text",
-      "text": userID === '' ? "Save" : "Update",
-    },
-    "blocks": [
-      {
-        "type": "input",
-        "block_id": "userID",
-        "element": {
-          "type": "plain_text_input",
-          "action_id": "userID",
-          "placeholder": {
-            "type": "plain_text",
-            "text": "100010"
-          },
-          "initial_value": userID,
-          "max_length": 20
-        },
-        "label": {
+function createConfigureView(userID: string = ''): {} {
+  let blocks = [
+    {
+      "type": "input",
+      "block_id": "userID",
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "userID",
+        "placeholder": {
           "type": "plain_text",
-          "text": "ユーザID"
+          "text": "100010"
         },
-        "hint": {
-          "type": "plain_text",
-          "text": "ユーザIDを入力してください"
-
-        }
+        "initial_value": userID,
+        "max_length": 20
       },
-      {
-        "type": "input",
-        "block_id": "password",
-        "element": {
-          "type": "plain_text_input",
-          "action_id": "password",
-          "placeholder": {
-            "type": "plain_text",
-            "text": "*****"
-          },
-          "max_length": 20
-        },
-        "label": {
-          "type": "plain_text",
-          "text": "パスワード"
-        },
-        "hint": {
-          "type": "plain_text",
-          "text": "パスワードを入力してください"
-
-        }
+      "label": {
+        "type": "plain_text",
+        "text": "ユーザID"
       },
-    ]
-  };
+      "hint": {
+        "type": "plain_text",
+        "text": "ユーザIDを入力してください"
 
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "password",
+      "element": {
+        "type": "plain_text_input",
+        "action_id": "password",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "*****"
+        },
+        "max_length": 20
+      },
+      "label": {
+        "type": "plain_text",
+        "text": "パスワード"
+      },
+      "hint": {
+        "type": "plain_text",
+        "text": "パスワードを入力してください"
+
+      }
+    }
+  ];
   if (userID !== '') {
-    const resetBlock = {
+    const resetBlock: {} = {
       "type": "section",
       "block_id": "reset",
       "text": {
@@ -240,48 +218,56 @@ function createConfigureView(userID: string = '') {
       }
     };
 
-    view.blocks.unshift(resetBlock);
+    blocks = [resetBlock, ...blocks];
   }
+
+  const view = {
+    "type": "modal",
+    "title": {
+      "type": "plain_text",
+      "text": "Setting HUE Credential.",
+    },
+    "callback_id": "save-credential",
+    "submit": {
+      "type": "plain_text",
+      "text": userID === '' ? "Save" : "Update",
+    },
+    "blocks": blocks
+  };
 
   return view;
 }
 
-function executeViewSubmission(viewSubmission: ViewSubmission): TextOutput {
+const executeViewSubmission = function (viewSubmission: ViewSubmission): {} {
   try {
-    const errors: object | null = validateViewSubmisstion(viewSubmission);
+    const errors: {} | null = validateViewSubmisstion(viewSubmission);
 
     if (errors) {
-      return ContentService.createTextOutput(JSON.stringify(errors)).setMimeType(
-        ContentService.MimeType.JSON
-      );
+      return errors;
     } else {
-      const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphrase(viewSubmission.user.id));
+      const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphraseSeeds(viewSubmission.user.id));
       store.setUserCredential(viewSubmission.user.id, hueClient.credential);
 
       const update = {
-        "response_action": "update",
-        "view": createCredentialModal("Credential save successfull")
+        response_action: 'update',
+        view: createCredentialModal('Credential save successfull')
       };
 
-      return ContentService.createTextOutput(JSON.stringify(update)).setMimeType(
-        ContentService.MimeType.JSON
-      );
+      return update;
     }
   } catch (e) {
-    new JobBroker().enqueue('asyncLogging', { message: e.message, stack: e.stack });
+    new JobBroker().enqueue(asyncLogging, { message: e.message, stack: e.stack });
 
-    const failure = {
-      "response_action": "update",
-      "view": createCredentialModal(`executeViewSubmission failure.\nname: ${e.name}\nmessage: ${e.message}\nstack: ${e.stack}`)
+    const failure: {} = {
+      response_action: 'update',
+      view: createCredentialModal(`executeViewSubmission failure.\nname: ${e.name}\nmessage: ${e.message}\nstack: ${e.stack}`)
     };
 
-    return ContentService.createTextOutput(JSON.stringify(failure)).setMimeType(
-      ContentService.MimeType.JSON
-    );
+    return failure;
   }
 }
 
-function createCredentialModal(message: string): object {
+function createCredentialModal(message: string): {} {
   return {
     "type": "modal",
     "title": {
@@ -300,7 +286,7 @@ function createCredentialModal(message: string): object {
   };
 }
 
-function validateViewSubmisstion(viewSubmission: ViewSubmission): object | null {
+function validateViewSubmisstion(viewSubmission: ViewSubmission): {} | null {
   hueClient.doLogin(getStateValues(viewSubmission));
 
   if (hueClient.authenticated) {
@@ -310,35 +296,10 @@ function validateViewSubmisstion(viewSubmission: ViewSubmission): object | null 
       "response_action": "errors",
       "errors": {
         "userID": "ユーザーIDまたはパスワードが間違っています",
-        "password": "ユーザーIDまたßはパスワードが間違っています"
+        "password": "ユーザーIDまたはパスワードが間違っています"
       }
     };
   }
-}
-
-function executeBlockActions(blockActions: BlockActions): TextOutput {
-  const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphrase(blockActions.user.id));
-
-  store.removeUserCredential(blockActions.user.id);
-
-  try {
-    const slackClient = new SlackClient(handler.token);
-
-    slackClient.updateViews(createCredentialModal("Credential reset successfull"), blockActions.view.hash, blockActions.view.id);
-  } catch (e) {
-    new JobBroker().enqueue('asyncLogging', { message: e.message, stack: e.stack });
-  }
-
-  return ContentService.createTextOutput("").setMimeType(
-    ContentService.MimeType.JSON
-  );
-}
-
-function asyncLogging(parameter: any): void {
-  const jobBroker: JobBroker = new JobBroker();
-  jobBroker.consumeJob((parameter: any) => {
-    console.info(JSON.stringify(parameter));
-  });
 }
 
 function getStateValues(viewSubmission: ViewSubmission): UserCredential {
@@ -352,36 +313,96 @@ function getStateValues(viewSubmission: ViewSubmission): UserCredential {
   return credential;
 }
 
-function executeStartKintai(): void {
+const executeBlockActions = function (blockActions: BlockActions): void {
+  const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphraseSeeds(blockActions.user.id));
+
+  store.removeUserCredential(blockActions.user.id);
+
+  try {
+    const slackClient = new SlackClient(handler.token);
+
+    slackClient.updateViews(createCredentialModal('Credential reset successfull'), blockActions.view.hash, blockActions.view.id);
+  } catch (e) {
+    new JobBroker().enqueue(asyncLogging, { message: e.message, stack: e.stack });
+  }
+}
+const SATRT_REACTION: string = properties.getProperty('SATRT_REACTION') || 'sunny';
+const END_REACTION: string = properties.getProperty('END_REACTION') || 'confetti_ball';
+
+const executeAppMentionEvent = function (event: AppMentionEvent): void {
+  const slackClient = new SlackClient(handler.token);
+  const store = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphraseSeeds(event.user));
+  const credential: UserCredential = store.getUserCredential(event.user);
+
+  if (credential) {
+    const messages = event.text.split('\n');
+
+    for (let message of messages) {
+      if (['おはよう', '始業', '開始', 'hello', 'Hello', 'ハロー', 'こんにちは'].some(word => message.indexOf(word) !== -1)) {
+        if (slackClient.addReactions(event.channel, SATRT_REACTION, event.ts)) {
+          new JobBroker().enqueue(executeMentionStartKintai, event);
+        }
+        return;
+      }
+      if (['おつかれ', 'お疲', '終業', '終了', '終わり', '早退', 'goodby', 'Goodby', 'グッバイ', 'さようなら'].some(word => message.indexOf(word) !== -1)) {
+        if (slackClient.addReactions(event.channel, END_REACTION, event.ts)) {
+          new JobBroker().enqueue(executeMentionEndKintai, event);
+        }
+        return;
+      }
+    }
+
+    slackClient.postMessage(event.channel, 'なにか御用ですか？ :thinking_face:\nクレームなら作者に言ってくださいな :stuck_out_tongue:');
+  } else {
+    slackClient.postEphemeral(event.channel, `Not exists credential.\nSend message \`${COMMAND} config\``, event.user);
+  }
+}
+
+const executeCommandStartKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((commands: Commands) => {
-    // const slackClient = new SlackClient(handler.token);
-    // slackClient.addReactions(commands.channel_id, 'sunny', commands.trigger_id);
+    const startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
 
-    const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphrase(commands.user_id));
-    const credential: UserCredential = store.getUserCredential(commands.user_id);
-
-    const startMessage = hueClient.doLogin(credential).punchIn(HueClient.START_SUBMIT);
-
-    const webhook: SlackWebhooks = new SlackWebhooks(commands.response_url);
+    const webhook = new SlackWebhooks(commands.response_url);
     webhook.invoke(`<@${commands.user_id}>\n${startMessage}`);
   });
 }
 
-function executeEndKintai(): void {
+const executeMentionStartKintai = function (): void {
+  const jobBroker: JobBroker = new JobBroker();
+  jobBroker.consumeJob((event: AppMentionEvent) => {
+    const startMessage = punchIn(event.user, HueClient.START_SUBMIT);
+
+    const client = new SlackClient(handler.token);
+    client.postMessage(event.channel, `<@${event.user}>\n${startMessage}`, event.ts);
+  });
+}
+
+const executeCommandEndKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((commands: Commands) => {
-    // const slackClient = new SlackClient(handler.token);
-    // slackClient.addReactions(commands.channel_id, 'checkered_flag', commands.trigger_id);
+    const endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
 
-    const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphrase(commands.user_id));
-    const credential: UserCredential = store.getUserCredential(commands.user_id);
-
-    const endMessage = hueClient.doLogin(credential).punchIn(HueClient.END_SUBMIT);
-
-    const webhook: SlackWebhooks = new SlackWebhooks(commands.response_url);
+    const webhook = new SlackWebhooks(commands.response_url);
     webhook.invoke(`<@${commands.user_id}>\n${endMessage}`);
   });
+}
+
+const executeMentionEndKintai = function (): void {
+  const jobBroker: JobBroker = new JobBroker();
+  jobBroker.consumeJob((event: AppMentionEvent) => {
+    const endMessage = punchIn(event.user, HueClient.START_SUBMIT);
+
+    const client = new SlackClient(handler.token);
+    client.postMessage(event.channel, `<@${event.user}>\n${endMessage}`, event.ts);
+  });
+}
+
+function punchIn(user: string, type: string): string {
+  const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphraseSeeds(user));
+  const credential: UserCredential = store.getUserCredential(user);
+
+  return hueClient.doLogin(credential).punchIn(type);
 }
 
 export { executeSlashCommand, executeViewSubmission }
