@@ -49,6 +49,8 @@ In order to run the application and change its behavior, you need to set the fol
 |CLIENT_ID|○|Basic Information > App Credentials > Client ID|Use with OAuth|
 |CLIENT_SECRET|○|Basic Information > App Credentials > Client Secret|Use with OAuth|
 |HUE_SUB_DOMAIN|○|ex) `lwi0`.hue.worksap.com|Specify a subdomain for the the HUE MOBILE login URL.|
+|START_REACTION|optional|defalut: sunny (:sunny:) |Set the reaction emoji for Mentored Attendance messages.|
+|END_REACTION|optional|defalut: confetti_ball (:confetti_ball:)|Set the reaction emoji for Mentored off messages.|
 
 1. Open Project  
 `$ make open`

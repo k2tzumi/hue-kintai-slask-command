@@ -14,7 +14,7 @@ class SlackClient {
     public constructor(private token: string) {
     }
 
-    public oepnDialog(dialog: any, trigger_id: string): void {
+    public oepnDialog(dialog: {}, trigger_id: string): void {
         const endPoint = SlackClient.BASE_PATH + 'dialog.open';
         const payload: {} = {
             dialog: dialog,
@@ -29,7 +29,7 @@ class SlackClient {
         }
     }
 
-    public openViews(views: any, trigger_id: string): void {
+    public openViews(views: {}, trigger_id: string): void {
         const endPoint = SlackClient.BASE_PATH + 'views.open';
         const payload: {} = {
             view: views,
@@ -44,7 +44,7 @@ class SlackClient {
         }
     }
 
-    public updateViews(views: any, hash: string, view_id: string): void {
+    public updateViews(views: {}, hash: string, view_id: string): void {
         const endPoint = SlackClient.BASE_PATH + 'views.update';
         const payload: {} = {
             view: views,
@@ -123,7 +123,7 @@ class SlackClient {
         }
     }
 
-    private requestOptions(payload: any): URLFetchRequestOptions {
+    private requestOptions(payload: string | {}): URLFetchRequestOptions {
         const options: URLFetchRequestOptions = {
             method: 'post',
             headers: this.requestHeader(),
@@ -139,7 +139,7 @@ class SlackClient {
      * @param options 
      * @throws NetworkAccessError
      */
-    private invokeAPI(endPoint: string, payload: any): Response {
+    private invokeAPI(endPoint: string, payload: {}): Response {
         var response;
 
         try {

@@ -120,7 +120,7 @@ const executeSlashCommand = function (commands: Commands): { response_type: stri
       case 'help':
       default:
         response.response_type = 'ephemeral';
-        response.text = `*Usage*\n* ${COMMAND} [s|start]\n* ${COMMAND} [e|end]\n* ${COMMAND} config\n* ${COMMAND} help`;
+        response.text = `*Usage*\n* ${COMMAND} [s|start]\n* ${COMMAND} [e|end]\n* ${COMMAND} config\n* ${COMMAND} help\n* Send message \`@huekintaibot おはよう\``;
         break;
     }
   }
@@ -260,7 +260,7 @@ const executeViewSubmission = function (viewSubmission: ViewSubmission): {} {
 
     const failure: {} = {
       response_action: 'update',
-      view: createCredentialModal(`executeViewSubmission failure.\nname: ${e.name}\nmessage: ${e.message}\nstack: ${e.stack}`)
+      view: createCredentialModal(`executeViewSubmission failure.\nname: ${e.name} \nmessage: ${e.message} \nstack: ${e.stack} `)
     };
 
     return failure;
@@ -326,7 +326,7 @@ const executeBlockActions = function (blockActions: BlockActions): void {
     new JobBroker().enqueue(asyncLogging, { message: e.message, stack: e.stack });
   }
 }
-const SATRT_REACTION: string = properties.getProperty('SATRT_REACTION') || 'sunny';
+const START_REACTION: string = properties.getProperty('START_REACTION') || 'sunny';
 const END_REACTION: string = properties.getProperty('END_REACTION') || 'confetti_ball';
 
 const executeAppMentionEvent = function (event: AppMentionEvent): void {
@@ -339,7 +339,7 @@ const executeAppMentionEvent = function (event: AppMentionEvent): void {
 
     for (let message of messages) {
       if (['おはよう', '始業', '開始', 'hello', 'Hello', 'ハロー', 'こんにちは'].some(word => message.indexOf(word) !== -1)) {
-        if (slackClient.addReactions(event.channel, SATRT_REACTION, event.ts)) {
+        if (slackClient.addReactions(event.channel, START_REACTION, event.ts)) {
           new JobBroker().enqueue(executeMentionStartKintai, event);
         }
         return;
