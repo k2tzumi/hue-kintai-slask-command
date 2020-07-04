@@ -1,9 +1,6 @@
-export interface ViewSubmission {
-    type: string;
-    team: { id: string; domain: string; };
-    user: { id: string; name: string; };
-    api_app_id: string;
-    token: string;
+import { InteractionPayloads } from "./InteractionPayloads";
+
+export interface ViewSubmission extends InteractionPayloads {
     trigger_id: string;
     view: {
         id: string;

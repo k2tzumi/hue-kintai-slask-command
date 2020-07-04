@@ -25,12 +25,15 @@ class JobBroker {
         this.triggers = ScriptApp.getProjectTriggers();
     }
 
-    public enqueue(callback: string, parameter: any): void {
+    public enqueue(callback: Function, parameter: {}): void {
+        if (callback.name === 'anonymous') {
+            throw new Error('Unsupport anonymous callback function.');
+        }
         if (this.triggers.length > JobBroker.MAX_SLOT) {
             throw new Error('Busy.');
         }
 
-        const newTrigger: Trigger = ScriptApp.newTrigger(callback).timeBased().after(JobBroker.DELAY_DURATION).create();
+        const newTrigger: Trigger = ScriptApp.newTrigger(callback.name).timeBased().after(JobBroker.DELAY_DURATION).create();
 
         const jobParameter: JobParameter = {
             id: newTrigger.getUniqueId(),
@@ -44,13 +47,13 @@ class JobBroker {
     }
 
     public dequeue(): { job: JobParameter; trigger: Trigger } | null {
-        for (let i in this.triggers) {
-            const trigger: Trigger = this.triggers[i];
+        for (let trigger of this.triggers) {
             const popJob = this.queue.get(this.getCacheKey(trigger));
 
             if (popJob) {
                 const jobParameter: JobParameter = JSON.parse(popJob);
-                switch (jobParameter.state) {
+                const { state, start_at, id, created_at, parameter, end_at } = jobParameter;
+                switch (state) {
                     case 'waiting':
                         return {
                             job: jobParameter,
@@ -58,17 +61,18 @@ class JobBroker {
                         };
                     case 'starting':
                         // timeout
-                        if (new Date().getTime() - jobParameter.start_at > JobBroker.JOB_TIME_OUT) {
+                        if (new Date().getTime() - start_at > JobBroker.JOB_TIME_OUT) {
                             ScriptApp.deleteTrigger(trigger);
                             this.deleteJob(trigger);
-                            console.info(`job time out. id: ${jobParameter.id}, handler: ${trigger.getHandlerFunction()}, created_at: ${jobParameter.created_at}, start_at: ${jobParameter.start_at}, parameter: ${jobParameter.parameter}`);
+                            console.info(`job time out. id: ${id}, handler: ${trigger.getHandlerFunction()}, created_at: ${created_at}, start_at: ${start_at}, parameter: ${parameter}`);
                         }
                         break;
                     case 'end':
+                    case 'failed':
                     default:
                         ScriptApp.deleteTrigger(trigger);
                         this.deleteJob(trigger);
-                        console.info(`job clear. id: ${jobParameter.id}, handler: ${trigger.getHandlerFunction()}, created_at: ${jobParameter.created_at}, start_at: ${jobParameter.start_at}, end_at: ${jobParameter.end_at}, parameter: ${jobParameter.parameter}`);
+                        console.info(`job clear. id: ${id}, handler: ${trigger.getHandlerFunction()}, status: ${state} created_at: ${created_at}, start_at: ${start_at}, end_at: ${end_at}`);
                         break;
                 }
             } else {
@@ -80,7 +84,7 @@ class JobBroker {
         return null;
     }
 
-    public consumeJob(closure: Function) {
+    public consumeJob(closure: Function): void {
         const pop: { job: JobParameter; trigger: Trigger } = this.dequeue();
 
         if (pop) {
@@ -90,15 +94,26 @@ class JobBroker {
             this.saveJob(trigger, job);
             console.info(`job starting. id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.start_at}, parameter: ${job.parameter}`);
 
-            const parameter: any = JSON.parse(job.parameter);
+            try {
+                const parameter: {} = JSON.parse(job.parameter);
 
-            closure(parameter);
+                closure(parameter);
 
-            job.state = 'end';
-            job.end_at = new Date().getTime();
-            this.saveJob(trigger, job);
-            console.info(`job end. id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.end_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
+                job.state = 'end';
+                job.end_at = new Date().getTime();
+                this.saveJob(trigger, job);
+                console.info(`job success. id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.end_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
+            } catch (e) {
+                job.state = 'failed';
+                job.end_at = new Date().getTime();
+                this.saveJob(trigger, job);
+                console.warn(`job failed. message: ${e.message}, trace: ${e.trace}, id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.end_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
+            }
+
+            return;
         }
+
+        console.info(`Nothing active job.`);
     }
 
     private getCacheKey(trigger: Trigger): string {
