@@ -391,7 +391,7 @@ const executeCommandEndKintai = function (): void {
 const executeMentionEndKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((event: AppMentionEvent) => {
-    const endMessage = punchIn(event.user, HueClient.START_SUBMIT);
+    const endMessage = punchIn(event.user, HueClient.END_SUBMIT);
 
     const client = new SlackClient(handler.token);
     client.postMessage(event.channel, `<@${event.user}>\n${endMessage}`, event.ts);
