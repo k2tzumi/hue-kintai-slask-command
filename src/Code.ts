@@ -9,6 +9,7 @@ import { SlackWebhooks } from "./SlackWebhooks";
 import { BlockActions } from "./BlockActions";
 import { AppMentionEvent } from "./AppMentionEvent";
 import { SlackHandler } from "./SlackHandler";
+import { DuplicateEventError } from "./CallbackEventHandler";
 
 type TextOutput = GoogleAppsScript.Content.TextOutput
 type HtmlOutput = GoogleAppsScript.HTML.HtmlOutput;
@@ -17,9 +18,15 @@ const properties = PropertiesService.getScriptProperties();
 
 const CLIENT_ID: string = properties.getProperty("CLIENT_ID");
 const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
-const handler = new OAuth2Handler(CLIENT_ID, CLIENT_SECRET, PropertiesService.getUserProperties(), 'handleCallback');
 const HUE_SUB_DOMAIN: string = properties.getProperty("HUE_SUB_DOMAIN");
 const hueClient: HueClient = new HueClient(HUE_SUB_DOMAIN);
+let handler: OAuth2Handler;
+
+const handleCallback = function (request): HtmlOutput {
+  return handler.authCallback(request);
+}
+
+handler = new OAuth2Handler(CLIENT_ID, CLIENT_SECRET, PropertiesService.getUserProperties(), handleCallback.name);
 
 /**
  * Authorizes and makes a request to the Slack API.
@@ -48,10 +55,6 @@ function getRequestURL() {
   return serviceURL.replace('/dev', '/exec');
 }
 
-const handleCallback = function (request): HtmlOutput {
-  return handler.authCallback(request);
-}
-
 const asyncLogging = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((parameter: {}) => {
@@ -77,7 +80,12 @@ function doPost(e): TextOutput {
       return process.output;
     }
   } catch (exception) {
-    new JobBroker().enqueue(asyncLogging, { message: exception.message, stack: exception.stack });
+    if (exception instanceof DuplicateEventError) {
+      return ContentService.createTextOutput();
+    } else {
+      new JobBroker().enqueue(asyncLogging, { message: exception.message, stack: exception.stack });
+      throw exception;
+    }
   }
 
   throw new Error("No performed handler");
@@ -358,10 +366,17 @@ const executeAppMentionEvent = function (event: AppMentionEvent): void {
   }
 }
 
+const DEBUG: boolean = false;
+
 const executeCommandStartKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((commands: Commands) => {
-    const startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
+    let startMessage: string;
+    if (DEBUG) {
+      startMessage = 'executeCommandStartKintai';
+    } else {
+      startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
+    }
 
     const webhook = new SlackWebhooks(commands.response_url);
     webhook.invoke(`<@${commands.user_id}>\n${startMessage}`);
@@ -371,7 +386,12 @@ const executeCommandStartKintai = function (): void {
 const executeMentionStartKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((event: AppMentionEvent) => {
-    const startMessage = punchIn(event.user, HueClient.START_SUBMIT);
+    let startMessage: string;
+    if (DEBUG) {
+      startMessage = 'executeMentionStartKintai';
+    } else {
+      startMessage = punchIn(event.user, HueClient.START_SUBMIT);
+    }
 
     const client = new SlackClient(handler.token);
     client.postMessage(event.channel, `<@${event.user}>\n${startMessage}`, event.ts);
@@ -381,7 +401,12 @@ const executeMentionStartKintai = function (): void {
 const executeCommandEndKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((commands: Commands) => {
-    const endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
+    let endMessage: string;
+    if (DEBUG) {
+      endMessage = 'executeCommandEndKintai';
+    } else {
+      endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
+    }
 
     const webhook = new SlackWebhooks(commands.response_url);
     webhook.invoke(`<@${commands.user_id}>\n${endMessage}`);
@@ -391,7 +416,12 @@ const executeCommandEndKintai = function (): void {
 const executeMentionEndKintai = function (): void {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((event: AppMentionEvent) => {
-    const endMessage = punchIn(event.user, HueClient.END_SUBMIT);
+    let endMessage: string;
+    if (DEBUG) {
+      endMessage = 'executeMentionEndKintai';
+    } else {
+      endMessage = punchIn(event.user, HueClient.END_SUBMIT);
+    }
 
     const client = new SlackClient(handler.token);
     client.postMessage(event.channel, `<@${event.user}>\n${endMessage}`, event.ts);
@@ -402,7 +432,11 @@ function punchIn(user: string, type: string): string {
   const store: UserCredentialStore = new UserCredentialStore(PropertiesService.getUserProperties(), makePassphraseSeeds(user));
   const credential: UserCredential = store.getUserCredential(user);
 
-  return hueClient.doLogin(credential).punchIn(type);
+  if (credential) {
+    return hueClient.doLogin(credential).punchIn(type);
+  }
+
+  throw new Error(`Not exists credential. user:${user}`);
 }
 
 export { executeSlashCommand, executeViewSubmission }

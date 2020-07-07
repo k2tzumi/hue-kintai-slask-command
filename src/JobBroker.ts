@@ -7,13 +7,14 @@ interface JobParameter {
     created_at: number;
     start_at?: number;
     end_at?: number;
+    handler: string;
     parameter: string;
 }
 
 class JobBroker {
     static readonly CACHE_KEY_PREFIX = 'JobBroker#';
     static readonly MAX_SLOT = 10;
-    static readonly DELAY_DURATION = 100;
+    static readonly DELAY_DURATION = 150;
     // 1 Hour
     static readonly JOB_TIME_OUT = 3600000;
 
@@ -39,14 +40,14 @@ class JobBroker {
             id: newTrigger.getUniqueId(),
             state: 'waiting',
             created_at: new Date().getTime(),
+            handler: callback.name,
             parameter: JSON.stringify(parameter)
         };
 
         this.saveJob(newTrigger, jobParameter);
-        console.info(`job enqueued. id: ${jobParameter.id}, handler: ${newTrigger.getHandlerFunction()}, created_at: ${jobParameter.created_at}, parameter: ${jobParameter.parameter}`);
     }
 
-    public dequeue(): { job: JobParameter; trigger: Trigger } | null {
+    public dequeue(handler: string): { job: JobParameter; trigger: Trigger } | null {
         for (let trigger of this.triggers) {
             const popJob = this.queue.get(this.getCacheKey(trigger));
 
@@ -55,10 +56,13 @@ class JobBroker {
                 const { state, start_at, id, created_at, parameter, end_at } = jobParameter;
                 switch (state) {
                     case 'waiting':
-                        return {
-                            job: jobParameter,
-                            trigger: trigger
-                        };
+                        if (handler === jobParameter.handler) {
+                            return {
+                                job: jobParameter,
+                                trigger: trigger
+                            };
+                        }
+                        break;
                     case 'starting':
                         // timeout
                         if (new Date().getTime() - start_at > JobBroker.JOB_TIME_OUT) {
@@ -72,7 +76,7 @@ class JobBroker {
                     default:
                         ScriptApp.deleteTrigger(trigger);
                         this.deleteJob(trigger);
-                        console.info(`job clear. id: ${id}, handler: ${trigger.getHandlerFunction()}, status: ${state} created_at: ${created_at}, start_at: ${start_at}, end_at: ${end_at}`);
+                        console.info(`job clear. id: ${id}, handler: ${trigger.getHandlerFunction()}, status: ${state}, created_at: ${created_at}, start_at: ${start_at}, end_at: ${end_at}`);
                         break;
                 }
             } else {
@@ -85,7 +89,7 @@ class JobBroker {
     }
 
     public consumeJob(closure: Function): void {
-        const pop: { job: JobParameter; trigger: Trigger } = this.dequeue();
+        const pop: { job: JobParameter; trigger: Trigger } = this.dequeue(this.consumeJob.caller.name);
 
         if (pop) {
             const { job, trigger } = pop;
@@ -102,12 +106,12 @@ class JobBroker {
                 job.state = 'end';
                 job.end_at = new Date().getTime();
                 this.saveJob(trigger, job);
-                console.info(`job success. id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.end_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
+                console.info(`job success. id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.start_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
             } catch (e) {
                 job.state = 'failed';
                 job.end_at = new Date().getTime();
                 this.saveJob(trigger, job);
-                console.warn(`job failed. message: ${e.message}, trace: ${e.trace}, id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.end_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
+                console.warn(`job failed. message: ${e.message}, stack: ${e.stack}, id: ${job.id}, created_at: ${job.created_at}, start_at: ${job.start_at}, start_at: ${job.end_at}, parameter: ${job.parameter}`);
             }
 
             return;
@@ -117,11 +121,11 @@ class JobBroker {
     }
 
     private getCacheKey(trigger: Trigger): string {
-        return `${JobBroker.CACHE_KEY_PREFIX}${trigger.getUniqueId()}`;
+        return `${JobBroker.CACHE_KEY_PREFIX}${trigger.getHandlerFunction()}#${trigger.getUniqueId()}`;
     }
 
     private saveJob(trigger: Trigger, jobParameter: JobParameter): void {
-        this.queue.put(this.getCacheKey(trigger), JSON.stringify(jobParameter));
+        this.queue.put(this.getCacheKey(trigger), JSON.stringify(jobParameter), JobBroker.JOB_TIME_OUT * 2);
     }
 
     private deleteJob(trigger: Trigger): void {
