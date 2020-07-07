@@ -9,7 +9,7 @@ help:
 	clasp create --title hue-kintai-bot --type webapp --rootDir ./src
 	clasp setting fileExtension ts
 	# clasp setting filePushOrder
-	sed -i -e 's/}/,"filePushOrder":["src\/OAuth2Handler.ts","src\/HueClient.ts","src\/SlackBaseHandler.ts"]}/' .clasp.json
+	sed -i -e 's/}/,"filePushOrder":["src\/OAuth2Handler.ts","src\/HueClient.ts","src\/SlackBaseHandler.ts""src\/BaseError.ts",]}/' .clasp.json
 
 .PHONY: login
 login: ## Google login
