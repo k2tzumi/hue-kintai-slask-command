@@ -1,4 +1,5 @@
 [![clasp](https://img.shields.io/badge/built%20with-clasp-4285f4.svg)](https://github.com/google/clasp)
+![ci](https://github.com/k2tzumi/hue-kintai-slask-command/workflows/ci/badge.svg)
 
 What is this?
 ==============================

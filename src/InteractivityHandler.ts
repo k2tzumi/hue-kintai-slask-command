@@ -1,51 +1,79 @@
 import { SlackBaseHandler } from "./SlackBaseHandler";
-import { InteractionPayloads } from "./InteractionPayloads";
+import { Slack } from "./slack/types/index.d";
 
 type TextOutput = GoogleAppsScript.Content.TextOutput;
+type Interaction = Slack.Interactivity.Interaction;
+type BlockActions = Slack.Interactivity.BlockActions;
+type InteractivityFunction = (interaction: Interaction) => {} | void;
 
-class InteractivityHandler extends SlackBaseHandler {
+class InteractivityHandler extends SlackBaseHandler<InteractivityFunction> {
+  public handle(e): { performed: boolean; output: TextOutput | null } {
+    const { payload } = e.parameter;
 
-    public handle(e): { performed: boolean; output: TextOutput | null } {
-        const { payload } = e.parameter;
-
-        if (payload) {
-            const request = JSON.parse(payload)
-            return { performed: true, output: this.convertJSONOutput(this.bindInteractivity(request)) };
-        }
-
-        return { performed: false, output: null };
+    if (payload) {
+      const request = JSON.parse(payload);
+      return {
+        performed: true,
+        output: this.convertJSONOutput(this.bindInteractivity(request))
+      };
     }
 
-    private bindInteractivity(payload: InteractionPayloads): {} {
-        const { type, trigger_id, hash } = payload;
-        this.validateVerificationToken(payload.token);
+    return { performed: false, output: null };
+  }
 
-        switch (type) {
-            case 'block_actions':
-            case 'message_actions':
-                if (this.isHandleProceeded(trigger_id)) {
-                    throw new Error(`Interaction payloads duplicate called. type: ${type}, trigger_id: ${trigger_id}`);
-                }
-                break;
-            case 'view_submission':
-                if (this.isHandleProceeded(hash)) {
-                    throw new Error(`Interaction payloads duplicate called. type: ${type}, hash: ${hash}`);
-                }
-                break;
-            case 'view_closed':
-                break;
-            default:
-                throw new Error(`Unknow interaction. type: ${type}`);
+  private bindInteractivity(interaction: Interaction): {} | void {
+    const { type, token } = interaction;
+    this.validateVerificationToken(token);
+
+    switch (true) {
+      case interaction.hasOwnProperty("trigger_id"):
+        if (this.isHandleProceeded(interaction.trigger_id)) {
+          throw new Error(
+            `Interaction payloads duplicate called. request: ${JSON.stringify(
+              interaction
+            )}`
+          );
         }
-
-        const listner: Function | null = this.getListener(type);
-
-        if (listner) {
-            return listner(payload);
+        break;
+      case interaction.hasOwnProperty("hash"):
+        if (this.isHandleProceeded(interaction.hash)) {
+          throw new Error(
+            `Interaction payloads duplicate called. request: ${JSON.stringify(
+              interaction
+            )}`
+          );
         }
-
-        throw new Error(`Undifine interaction listner. type: ${type}`);
+        break;
+      default:
+        throw new Error(
+          `Unknow interaction payloads. request: ${JSON.stringify(interaction)}`
+        );
     }
+
+    // Prefer subtype listeners for block actions
+    if (type === "block_actions") {
+      const blockActions = interaction as BlockActions;
+
+      const blockActionListener = this.getListener(
+        blockActions.actions[0].type
+      );
+
+      if (blockActionListener) {
+        blockActionListener(blockActions);
+        return;
+      }
+    }
+
+    const interactivityListner = this.getListener(type);
+
+    if (interactivityListner) {
+      return interactivityListner(interaction);
+    }
+
+    throw new Error(
+      `Undifine interaction listner. payload: ${JSON.stringify(interaction)}`
+    );
+  }
 }
 
-export { InteractivityHandler }
+export { InteractivityHandler, InteractivityFunction };

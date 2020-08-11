@@ -11,6 +11,9 @@ help:
 	# clasp setting filePushOrder
 	sed -i -e 's/}/,"filePushOrder":["src\/OAuth2Handler.ts","src\/HueClient.ts","src\/SlackBaseHandler.ts""src\/BaseError.ts",]}/' .clasp.json
 
+node_modules:
+	npm install
+
 .PHONY: login
 login: ## Google login
 login:
@@ -18,8 +21,8 @@ login:
 
 .PHONY: push
 push: ## Push Google apps scripts
-push: .clasp.json
-	clasp push
+push: .clasp.json lint
+	clasp push -f
 
 .PHONY: deploy
 deploy: ## Deploy Google apps scripts
@@ -43,8 +46,13 @@ pull: .clasp.json
 
 .PHONY: lint
 lint: ## Run tslint
-lint:
-	tslint --fix src/*.ts
+lint: node_modules
+	npm run lint
+
+.PHONY: test
+test: ## Run jest
+test: node_modules
+	npm test
 
 .PHONY: undeploy
 undeploy: ## all undeploy Google apps scripts

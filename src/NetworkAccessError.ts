@@ -1,9 +1,9 @@
 import { BaseError } from "./BaseError";
 
 class NetworkAccessError extends BaseError {
-    constructor(public statusCode: number, e?: string) {
-        super(e);
-    }
+  constructor(public statusCode: number, e?: string) {
+    super(e);
+  }
 }
 
-export { NetworkAccessError }
+export { NetworkAccessError };
