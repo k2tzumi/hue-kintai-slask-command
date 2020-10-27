@@ -102,6 +102,16 @@ class HueClient {
         const hiddens = contents.match(hiddenMatcher);
         const hiddenValues: { [key: string]: string } = {};
 
+        if (hiddens === null) {
+          console.warn(
+            `view TimeRec unknown response error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          );
+          throw new NetworkAccessError(
+            response.getResponseCode(),
+            response.getContentText()
+          );
+        }
+
         for (const hidden of hiddens) {
           const name = hidden.match(/name=\"(.*?)\"/)[1];
           const value = hidden.match(/value=\"(.*?)\"/)[1];
