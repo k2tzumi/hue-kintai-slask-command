@@ -1,6 +1,6 @@
 type Cache = GoogleAppsScript.Cache.Cache;
 type Trigger = GoogleAppsScript.Script.Trigger;
-type JobFunction = ({}) => void;
+type JobFunction = ({ }) => void;
 
 interface JobParameter {
   id: string;
@@ -17,7 +17,7 @@ type Job = { parameter: JobParameter; trigger: Trigger };
 
 class JobBroker {
   public static readonly MAX_SLOT = 10;
-  public static readonly DELAY_DURATION = 150;
+  public static readonly DELAY_DURATION = 300;
   // 1 Hour
   public static readonly JOB_EXECUTE_TIME_OUT = 3600;
   /**
@@ -77,12 +77,9 @@ class JobBroker {
                 };
               } else {
                 console.info(
-                  `job wait. id: ${
-                    parameter.id
-                  }, handler: ${trigger.getHandlerFunction()}, created_at: ${
-                    parameter.created_at
-                  }, parameter: ${parameter.parameter}, scheduled_at: ${
-                    parameter.scheduled_at
+                  `job wait. id: ${parameter.id
+                  }, handler: ${trigger.getHandlerFunction()}, created_at: ${parameter.created_at
+                  }, parameter: ${parameter.parameter}, scheduled_at: ${parameter.scheduled_at
                   }, now: ${this.now}`
                 );
               }
@@ -97,8 +94,7 @@ class JobBroker {
             );
           } else {
             console.info(
-              `job time out. id: ${id}, handler: ${trigger.getHandlerFunction()}, status: ${state}, parameter: ${
-                parameter.parameter
+              `job time out. id: ${id}, handler: ${trigger.getHandlerFunction()}, status: ${state}, parameter: ${parameter.parameter
               }, created_at: ${created_at}, start_at: ${start_at}`
             );
           }
@@ -167,9 +163,8 @@ class JobBroker {
   }
 
   private getCacheKey(trigger: Trigger): string {
-    return `${
-      this.constructor.name
-    }#${trigger.getHandlerFunction()}#${trigger.getUniqueId()}`;
+    return `${this.constructor.name
+      }#${trigger.getHandlerFunction()}#${trigger.getUniqueId()}`;
   }
 
   protected createJob(callback: JobFunction, parameter: {}): Job {
