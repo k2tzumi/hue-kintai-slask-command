@@ -2,11 +2,12 @@ import { Slack } from "./slack/types/index.d";
 import { OAuth2Handler } from "./OAuth2Handler";
 import { UserCredentialStore, UserCredential } from "./UserCredentialStore";
 import { SlackApiClient } from "./SlackApiClient";
-import { HueClient } from "./HueClient";
+import { HueClient, HueClientError } from "./HueClient";
 import { JobBroker } from "./JobBroker";
 import { SlackWebhooks } from "./SlackWebhooks";
 import { SlackHandler } from "./SlackHandler";
 import { DuplicateEventError } from "./CallbackEventHandler";
+import { NetworkAccessError } from "./NetworkAccessError";
 
 type TextOutput = GoogleAppsScript.Content.TextOutput;
 type HtmlOutput = GoogleAppsScript.HTML.HtmlOutput;
@@ -454,14 +455,18 @@ const executeCommandStartKintai = (): void => {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((commands: Commands) => {
     let startMessage: string;
-    if (DEBUG) {
-      startMessage = "executeCommandStartKintai";
-    } else {
-      startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
-    }
+    try {
+      if (DEBUG) {
+        startMessage = "executeCommandStartKintai";
+      } else {
+        startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
+      }
 
-    const webhook = new SlackWebhooks(commands.response_url);
-    webhook.sendText(`<@${commands.user_id}>\n${startMessage}`);
+      const webhook = new SlackWebhooks(commands.response_url);
+      webhook.sendText(`<@${commands.user_id}>\n${startMessage}`);
+    } catch (e) {
+      hueClientErrorCommandHandle(e, commands);
+    }
   });
 };
 
@@ -470,18 +475,22 @@ const executeMentionStartKintai = (): void => {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((event: AppMentionEvent) => {
     let startMessage: string;
-    if (DEBUG) {
-      startMessage = "executeMentionStartKintai";
-    } else {
-      startMessage = punchIn(event.user, HueClient.START_SUBMIT);
-    }
+    try {
+      if (DEBUG) {
+        startMessage = "executeMentionStartKintai";
+      } else {
+        startMessage = punchIn(event.user, HueClient.START_SUBMIT);
+      }
 
-    const client = new SlackApiClient(handler.token);
-    client.chatPostMessage(
-      event.channel,
-      `<@${event.user}>\n${startMessage}`,
-      event.ts
-    );
+      const client = new SlackApiClient(handler.token);
+      client.chatPostMessage(
+        event.channel,
+        `<@${event.user}>\n${startMessage}`,
+        event.ts
+      );
+    } catch (e) {
+      hueClientErrorEventHandle(e, event);
+    }
   });
 };
 
@@ -489,36 +498,69 @@ const executeCommandEndKintai = (): void => {
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((commands: Commands) => {
     let endMessage: string;
-    if (DEBUG) {
-      endMessage = "executeCommandEndKintai";
-    } else {
-      endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
-    }
+    try {
+      if (DEBUG) {
+        endMessage = "executeCommandEndKintai";
+      } else {
+        endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
+      }
 
-    const webhook = new SlackWebhooks(commands.response_url);
-    webhook.sendText(`<@${commands.user_id}>\n${endMessage}`);
+      const webhook = new SlackWebhooks(commands.response_url);
+      webhook.sendText(`<@${commands.user_id}>\n${endMessage}`);
+    } catch (e) {
+      hueClientErrorCommandHandle(e, commands);
+    }
   });
 };
+
+function hueClientErrorCommandHandle(e: Error, commands: Commands): void {
+  const webhook = new SlackWebhooks(commands.response_url);
+  webhook.sendText(convertHueClientErrorMessage(e), null, "ephemeral");
+}
 
 const executeMentionEndKintai = (): void => {
   initializeOAuth2Handler();
   const jobBroker: JobBroker = new JobBroker();
   jobBroker.consumeJob((event: AppMentionEvent) => {
     let endMessage: string;
-    if (DEBUG) {
-      endMessage = "executeMentionEndKintai";
-    } else {
-      endMessage = punchIn(event.user, HueClient.END_SUBMIT);
-    }
+    try {
+      if (DEBUG) {
+        endMessage = "executeMentionEndKintai";
+      } else {
+        endMessage = punchIn(event.user, HueClient.END_SUBMIT);
+      }
 
-    const client = new SlackApiClient(handler.token);
-    client.chatPostMessage(
-      event.channel,
-      `<@${event.user}>\n${endMessage}`,
-      event.ts
-    );
+      const client = new SlackApiClient(handler.token);
+      client.chatPostMessage(
+        event.channel,
+        `<@${event.user}>\n${endMessage}`,
+        event.ts
+      );
+    } catch (e) {
+      hueClientErrorEventHandle(e, event);
+    }
   });
 };
+
+function hueClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
+  const client = new SlackApiClient(handler.token);
+  client.postEphemeral(
+    event.channel,
+    convertHueClientErrorMessage(e),
+    event.user
+  );
+}
+
+function convertHueClientErrorMessage(e: Error): string {
+  switch (true) {
+    case e instanceof HueClientError:
+      return `ログインができませんでした。\`${COMMAND} config\` で認証をやり直してください`;
+    case e instanceof NetworkAccessError:
+      return "HUEに正しくアクセスできませんでした。暫くしてやり直してみてください";
+    default:
+      return "なにか問題が発生しました。";
+  }
+}
 
 function punchIn(user: string, type: string): string {
   const store: UserCredentialStore = new UserCredentialStore(

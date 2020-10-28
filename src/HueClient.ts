@@ -1,9 +1,16 @@
 import { UserCredential } from "./UserCredentialStore";
 import { NetworkAccessError } from "./NetworkAccessError";
+import { BaseError } from "./BaseError";
 
 type URLFetchRequestOptions = GoogleAppsScript.URL_Fetch.URLFetchRequestOptions;
 type HTTPResponse = GoogleAppsScript.URL_Fetch.HTTPResponse;
 type HttpHeaders = GoogleAppsScript.URL_Fetch.HttpHeaders;
+
+class HueClientError extends BaseError {
+  constructor(public message: string, e?: string) {
+    super(e);
+  }
+}
 
 class HueClient {
   static readonly START_SUBMIT = "　　　出勤　　　";
@@ -61,9 +68,10 @@ class HueClient {
       case 200:
         const headers = response.getAllHeaders();
         this.cookie = this.getCookieHeaderValues(headers);
-        if (response.getContentText().indexOf("ログアウト") !== -1) {
-          this.credential = credential;
+        if (response.getContentText().indexOf("ログアウト") === -1) {
+          throw new HueClientError("login failed");
         }
+        this.credential = credential;
 
         return this;
       default:
@@ -106,10 +114,7 @@ class HueClient {
           console.warn(
             `view TimeRec unknown response error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
           );
-          throw new NetworkAccessError(
-            response.getResponseCode(),
-            response.getContentText()
-          );
+          throw new HueClientError("unknown response");
         }
 
         for (const hidden of hiddens) {
@@ -196,4 +201,4 @@ class HueClient {
   }
 }
 
-export { HueClient };
+export { HueClient, HueClientError };
