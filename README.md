@@ -49,7 +49,7 @@ In order to run the application and change its behavior, you need to set the fol
 |VERIFICATION_TOKEN|○|Basic Information > App Credentials > Verification Token|A token that easily authenticates the source of a hooked request|
 |CLIENT_ID|○|Basic Information > App Credentials > Client ID|Use with OAuth|
 |CLIENT_SECRET|○|Basic Information > App Credentials > Client Secret|Use with OAuth|
-|HUE_SUB_DOMAIN|○|ex) `lwi0`.hue.worksap.com|Specify a subdomain for the the HUE MOBILE login URL.|
+|HUE_DOMAIN|○|ex) `lwi0.hue.worksap.com`, `lwi0-cws.company.works-hi.com`|Specify a domain for the the HUE MOBILE login URL.|
 |START_REACTION|optional|defalut: sunny (:sunny:) |Set the reaction emoji for Mentored Attendance messages.|
 |END_REACTION|optional|defalut: confetti_ball (:confetti_ball:)|Set the reaction emoji for Mentored off messages.|
 
@@ -83,7 +83,7 @@ You must specify a destination channel that bot can post to as an app.
 1. Open web application  
 `$ make application`  
 The browser will be launched with the following URL:  
-ex) https://script.google.com/macros/s/miserarenaiyo/exec  
+example) https://script.google.com/macros/s/miserarenaiyo/exec  
 2. Click `Authorize.`  
 You must specify a destination channel that bot can post to as an app.
 3. Click `Allow`  
@@ -102,17 +102,17 @@ Thes click the `Setting EventSubscriptions` to set up an Event Subscriptions.
 
 * Create New Command  
 Setting Request URL.  
-ex) https://script.google.com/macros/s/miserarenaiyo/exec  
+example) https://script.google.com/macros/s/miserarenaiyo/exec  
 
 ### Setting Interactivity & Shortcuts
 
 Turn on.  
 Setting Interactivity Request URL  
-ex) https://script.google.com/macros/s/miserarenaiyo/exec
+example) https://script.google.com/macros/s/miserarenaiyo/exec
 
 ### Setting Event Subscriptions  
 Turn on.  
 Setting Request URL.  
-ex) https://script.google.com/macros/s/miserarenaiyo/exec  
+example) https://script.google.com/macros/s/miserarenaiyo/exec  
 Add Workspace Event.   
 Select `app_mention`.
