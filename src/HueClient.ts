@@ -19,11 +19,7 @@ class HueClient {
   public cookie: string;
   public credential: UserCredential = null;
 
-  public constructor(private subdomain: string) {}
-
-  public get domain(): string {
-    return `${this.subdomain}.hue.worksap.com`;
-  }
+  public constructor(private domain: string) { }
 
   public get authenticated(): boolean {
     return this.credential !== null;

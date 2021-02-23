@@ -20,8 +20,8 @@ const properties = PropertiesService.getScriptProperties();
 
 const CLIENT_ID: string = properties.getProperty("CLIENT_ID");
 const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
-const HUE_SUB_DOMAIN: string = properties.getProperty("HUE_SUB_DOMAIN");
-const hueClient: HueClient = new HueClient(HUE_SUB_DOMAIN);
+const HUE_DOMAIN: string = properties.getProperty("HUE_DOMAIN");
+const hueClient: HueClient = new HueClient(HUE_DOMAIN);
 let handler: OAuth2Handler;
 
 const handleCallback = (request): HtmlOutput => {
