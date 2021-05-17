@@ -421,8 +421,8 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
           "終了",
           "終わり",
           "早退",
-          "goodby",
-          "Goodby",
+          "goodbye",
+          "Goodbye",
           "グッバイ",
           "さようなら"
         ].some(word => message.indexOf(word) !== -1)
