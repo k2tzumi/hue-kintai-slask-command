@@ -4,8 +4,10 @@ import { Slack } from "./slack/types/index.d";
 type TextOutput = GoogleAppsScript.Content.TextOutput;
 type Interaction = Slack.Interactivity.Interaction;
 type BlockActions = Slack.Interactivity.BlockActions;
-type BlockActionsFunction = (blockActions: BlockActions) => {};
-type InteractivityFunction = ((interaction: Interaction) => {} | void) | BlockActionsFunction;
+type BlockActionsFunction = (blockActions: BlockActions) => {} | void;
+type ViewSubmission = Slack.Interactivity.ViewSubmission;
+type viewSubmissionFunction = (viewSubmission: ViewSubmission) => {};
+type InteractivityFunction = ((interaction: Interaction) => {} | void) | BlockActionsFunction | viewSubmissionFunction;
 
 class InteractivityHandler extends SlackBaseHandler<InteractivityFunction> {
   public handle(e): { performed: boolean; output: TextOutput | null } {
