@@ -12,6 +12,7 @@ module.exports = {
         ScriptApp: {},
         Utilities: {},
         cCryptoGS: {},
+        JobBroker: {},
     },
     moduleDirectories: [
         'node_modules',
