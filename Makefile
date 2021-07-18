@@ -10,6 +10,7 @@ help:
 	clasp setting fileExtension ts
 	# clasp setting filePushOrder
 	sed -i -e 's/}/,"filePushOrder":["src\/OAuth2Handler.ts","src\/SlackBaseHandler.ts","src\/BaseError.ts","src\/HueClient.ts"]}/' .clasp.json
+	rm .clasp.json-e
 
 node_modules:
 	npm install
@@ -28,6 +29,11 @@ push: .clasp.json lint
 deploy: ## Deploy Google apps scripts
 deploy: .clasp.json
 	clasp deploy
+
+.PHONY: redeploy
+redeploy: ## Re-Deploy Google apps scripts
+redeploy: .clasp.json
+	clasp deploy -i `clasp deployments | grep "web app meta-version" | cut -f2 -d" "` -d "web app meta-version"
 
 .PHONY: open
 open: ## Open Google apps scripts
