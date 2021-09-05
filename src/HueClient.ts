@@ -19,7 +19,7 @@ class HueClient {
   public cookie: string;
   public credential: UserCredential = null;
 
-  public constructor(private domain: string) { }
+  public constructor(private domain: string) {}
 
   public get authenticated(): boolean {
     return this.credential !== null;
@@ -33,6 +33,10 @@ class HueClient {
 
   private loginEndpoint(): string {
     return `https://${this.domain}/self-workflow/cws/mbl/MblActLogin@act=submit`;
+  }
+
+  public get punchingURLForPc(): string {
+    return `https://${this.domain}/self-workflow/cws/srwtimerec?@DIRECT=true`;
   }
 
   public doLogin(credential: UserCredential): HueClient {

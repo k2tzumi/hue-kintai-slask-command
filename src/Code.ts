@@ -16,7 +16,9 @@ type DoGet = GoogleAppsScript.Events.DoGet;
 type Commands = Slack.SlashCommand.Commands | Record<string, any>;
 type ViewSubmission = Slack.Interactivity.ViewSubmission;
 type BlockActions = Slack.Interactivity.BlockActions;
-type AppMentionEvent = Slack.CallbackEvent.AppMentionEvent | Record<string, any>;
+type AppMentionEvent =
+  | Slack.CallbackEvent.AppMentionEvent
+  | Record<string, any>;
 
 const properties = PropertiesService.getScriptProperties();
 
@@ -467,8 +469,7 @@ const executeCommandStartKintai = (): void => {
     } catch (e) {
       hueClientErrorCommandHandle(e, commands);
     }
-  },
-  "executeCommandStartKintai");
+  }, "executeCommandStartKintai");
 };
 
 const executeMentionStartKintai = (): void => {
@@ -491,8 +492,7 @@ const executeMentionStartKintai = (): void => {
     } catch (e) {
       hueClientErrorEventHandle(e, event);
     }
-  },
-  "executeMentionStartKintai");
+  }, "executeMentionStartKintai");
 };
 
 const executeCommandEndKintai = (): void => {
@@ -510,13 +510,16 @@ const executeCommandEndKintai = (): void => {
     } catch (e) {
       hueClientErrorCommandHandle(e, commands);
     }
-  },
-  "executeCommandEndKintai");
+  }, "executeCommandEndKintai");
 };
 
 function hueClientErrorCommandHandle(e: Error, commands: Commands): void {
   const webhook = new SlackWebhooks(commands.response_url);
-  webhook.sendText(convertHueClientErrorMessage(e), null, "ephemeral");
+  webhook.sendText(
+    convertHueClientErrorMessage(e, commands.user_id),
+    null,
+    "ephemeral"
+  );
 }
 
 const executeMentionEndKintai = (): void => {
@@ -539,27 +542,26 @@ const executeMentionEndKintai = (): void => {
     } catch (e) {
       hueClientErrorEventHandle(e, event);
     }
-  },
-  "executeMentionEndKintai");
+  }, "executeMentionEndKintai");
 };
 
 function hueClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
   const client = new SlackApiClient(handler.token);
   client.postEphemeral(
     event.channel,
-    convertHueClientErrorMessage(e),
+    convertHueClientErrorMessage(e, event.user),
     event.user
   );
 }
 
-function convertHueClientErrorMessage(e: Error): string {
+function convertHueClientErrorMessage(e: Error, user: string): string {
   switch (true) {
     case e instanceof HueClientError:
-      return `ログインができませんでした。\`${COMMAND} config\` で認証をやり直してください`;
+      return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
     case e instanceof NetworkAccessError:
-      return "HUEに正しくアクセスできませんでした。暫くしてやり直してみてください";
+      return `@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
     default:
-      return "なにか問題が発生しました。";
+      return `@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
   }
 }
 
