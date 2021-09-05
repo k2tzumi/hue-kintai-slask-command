@@ -26,7 +26,8 @@
   "exceptionLogging": "STACKDRIVER",
   "urlFetchWhitelist": [
     "https://slack.com/",
-    "https://hooks.slack.com/"
+    "https://hooks.slack.com/",
+    "https://*.company.works-hi.com/"
   ],
   "runtimeVersion": "V8"
 }
