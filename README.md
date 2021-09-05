@@ -15,8 +15,9 @@ REQUIREMENTS
 `npm install -g @google/clasp`
 - `make`
 - GAS Library
-  - cCryptoGS
-  - OAuth2
+  - [cCryptoGS](https://github.com/brucemcpherson/cCryptoGS)
+  - [OAuth2](https://github.com/googleworkspace/apps-script-oauth2)
+  - [JobBroker](https://github.com/k2tzumi/apps-script-jobqueue)
 
 USAGE
 --------------------

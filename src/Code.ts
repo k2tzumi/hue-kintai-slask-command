@@ -3,18 +3,20 @@ import { OAuth2Handler } from "./OAuth2Handler";
 import { UserCredentialStore, UserCredential } from "./UserCredentialStore";
 import { SlackApiClient } from "./SlackApiClient";
 import { HueClient, HueClientError } from "./HueClient";
-import { JobBroker } from "./JobBroker";
 import { SlackWebhooks } from "./SlackWebhooks";
 import { SlackHandler } from "./SlackHandler";
 import { DuplicateEventError } from "./CallbackEventHandler";
 import { NetworkAccessError } from "./NetworkAccessError";
+// import { JobBroker } from "apps-script-jobqueue";
 
 type TextOutput = GoogleAppsScript.Content.TextOutput;
 type HtmlOutput = GoogleAppsScript.HTML.HtmlOutput;
-type Commands = Slack.SlashCommand.Commands;
+type DoPost = GoogleAppsScript.Events.DoPost;
+type DoGet = GoogleAppsScript.Events.DoGet;
+type Commands = Slack.SlashCommand.Commands | Record<string, any>;
 type ViewSubmission = Slack.Interactivity.ViewSubmission;
 type BlockActions = Slack.Interactivity.BlockActions;
-type AppMentionEvent = Slack.CallbackEvent.AppMentionEvent;
+type AppMentionEvent = Slack.CallbackEvent.AppMentionEvent | Record<string, any>;
 
 const properties = PropertiesService.getScriptProperties();
 
@@ -41,11 +43,11 @@ function initializeOAuth2Handler(): void {
 /**
  * Authorizes and makes a request to the Slack API.
  */
-function doGet(request): HtmlOutput {
+function doGet(request: DoGet): HtmlOutput {
   initializeOAuth2Handler();
 
   // Clear authentication by accessing with the get parameter `?logout=true`
-  if (request.parameter.logout) {
+  if (request.parameter.hasOwnProperty("logout")) {
     handler.clearService();
     const template = HtmlService.createTemplate(
       'Logout<br /><a href="<?= requestUrl ?>" target="_blank">refresh</a>.'
@@ -67,16 +69,15 @@ function doGet(request): HtmlOutput {
 }
 
 const asyncLogging = (): void => {
-  const jobBroker: JobBroker = new JobBroker();
-  jobBroker.consumeJob((parameter: {}) => {
+  JobBroker.consumeAsyncJob((parameter: Record<string, any>) => {
     console.info(JSON.stringify(parameter));
-  });
+  }, "asyncLogging");
 };
 
 const VERIFICATION_TOKEN: string = properties.getProperty("VERIFICATION_TOKEN");
 const COMMAND = "/kintai";
 
-function doPost(e): TextOutput {
+function doPost(e: DoPost): TextOutput {
   initializeOAuth2Handler();
 
   const slackHandler = new SlackHandler(VERIFICATION_TOKEN);
@@ -99,7 +100,7 @@ function doPost(e): TextOutput {
     if (exception instanceof DuplicateEventError) {
       return ContentService.createTextOutput();
     } else {
-      new JobBroker().enqueue(asyncLogging, {
+      JobBroker.enqueueAsyncJob(asyncLogging, {
         message: exception.message,
         stack: exception.stack
       });
@@ -135,13 +136,13 @@ const executeSlashCommand = (
     switch (commands.text) {
       case "s":
       case "start":
-        new JobBroker().enqueue(executeCommandStartKintai, commands);
+        JobBroker.enqueueAsyncJob(executeCommandStartKintai, commands);
         response.response_type = "in_channel";
         response.text = `<@${commands.user_id}>\nおはようございます。出勤打刻します。`;
         break;
       case "e":
       case "end":
-        new JobBroker().enqueue(executeCommandEndKintai, commands);
+        JobBroker.enqueueAsyncJob(executeCommandEndKintai, commands);
         response.response_type = "in_channel";
         response.text = `<@${commands.user_id}>\nおつかれさまでした。退勤打刻します。`;
         break;
@@ -214,7 +215,7 @@ function createConfigureView(userID: string = ""): {} {
     }
   ];
   if (userID !== "") {
-    const resetBlock: {} = {
+    const resetBlock: Record<string, any> = {
       type: "section",
       block_id: "reset",
       text: {
@@ -292,7 +293,7 @@ const executeViewSubmission = (viewSubmission: ViewSubmission): {} => {
       return update;
     }
   } catch (e) {
-    new JobBroker().enqueue(asyncLogging, {
+    JobBroker.enqueueAsyncJob(asyncLogging, {
       message: e.message,
       stack: e.stack
     });
@@ -371,7 +372,7 @@ const executeBlockActions = (blockActions: BlockActions): void => {
       blockActions.view.id
     );
   } catch (e) {
-    new JobBroker().enqueue(asyncLogging, {
+    JobBroker.enqueueAsyncJob(asyncLogging, {
       message: e.message,
       stack: e.stack
     });
@@ -409,7 +410,7 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
         if (
           slackApiClient.addReactions(event.channel, START_REACTION, event.ts)
         ) {
-          new JobBroker().enqueue(executeMentionStartKintai, event);
+          JobBroker.enqueueAsyncJob(executeMentionStartKintai, event);
         }
         return;
       }
@@ -430,7 +431,7 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
         if (
           slackApiClient.addReactions(event.channel, END_REACTION, event.ts)
         ) {
-          new JobBroker().enqueue(executeMentionEndKintai, event);
+          JobBroker.enqueueAsyncJob(executeMentionEndKintai, event);
         }
         return;
       }
@@ -452,8 +453,7 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
 const DEBUG: boolean = false;
 
 const executeCommandStartKintai = (): void => {
-  const jobBroker: JobBroker = new JobBroker();
-  jobBroker.consumeJob((commands: Commands) => {
+  JobBroker.consumeAsyncJob((commands: Commands) => {
     let startMessage: string;
     try {
       if (DEBUG) {
@@ -467,13 +467,13 @@ const executeCommandStartKintai = (): void => {
     } catch (e) {
       hueClientErrorCommandHandle(e, commands);
     }
-  });
+  },
+  "executeCommandStartKintai");
 };
 
 const executeMentionStartKintai = (): void => {
   initializeOAuth2Handler();
-  const jobBroker: JobBroker = new JobBroker();
-  jobBroker.consumeJob((event: AppMentionEvent) => {
+  JobBroker.consumeAsyncJob((event: AppMentionEvent) => {
     let startMessage: string;
     try {
       if (DEBUG) {
@@ -491,12 +491,12 @@ const executeMentionStartKintai = (): void => {
     } catch (e) {
       hueClientErrorEventHandle(e, event);
     }
-  });
+  },
+  "executeMentionStartKintai");
 };
 
 const executeCommandEndKintai = (): void => {
-  const jobBroker: JobBroker = new JobBroker();
-  jobBroker.consumeJob((commands: Commands) => {
+  JobBroker.consumeAsyncJob((commands: Commands) => {
     let endMessage: string;
     try {
       if (DEBUG) {
@@ -510,7 +510,8 @@ const executeCommandEndKintai = (): void => {
     } catch (e) {
       hueClientErrorCommandHandle(e, commands);
     }
-  });
+  },
+  "executeCommandEndKintai");
 };
 
 function hueClientErrorCommandHandle(e: Error, commands: Commands): void {
@@ -520,8 +521,7 @@ function hueClientErrorCommandHandle(e: Error, commands: Commands): void {
 
 const executeMentionEndKintai = (): void => {
   initializeOAuth2Handler();
-  const jobBroker: JobBroker = new JobBroker();
-  jobBroker.consumeJob((event: AppMentionEvent) => {
+  JobBroker.consumeAsyncJob((event: AppMentionEvent) => {
     let endMessage: string;
     try {
       if (DEBUG) {
@@ -539,7 +539,8 @@ const executeMentionEndKintai = (): void => {
     } catch (e) {
       hueClientErrorEventHandle(e, event);
     }
-  });
+  },
+  "executeMentionEndKintai");
 };
 
 function hueClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
