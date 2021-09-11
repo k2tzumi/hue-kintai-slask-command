@@ -108,7 +108,13 @@ class HueClient {
 
       formData = this.inputPassword(formData);
 
+      console.log(`cookie: ${this.cookie}`);
+
       formData = this.redirectWithSAMLart(formData);
+
+      console.log(`cookie: ${this.cookie}`);
+
+      formData = this.inputTimeRec();
 
       console.log(`cookie: ${this.cookie}`);
 
@@ -123,7 +129,6 @@ class HueClient {
 
   private authnRequest(samlRequest: string): { [key: string]: string } {
     const options: URLFetchRequestOptions = {
-      contentType: "application/x-www-form-urlencoded",
       method: "get",
       headers: this.headers,
       muteHttpExceptions: true,
@@ -193,6 +198,25 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
+  private inputTimeRec(): { [key: string]: string } {
+    const options: URLFetchRequestOptions = {
+      method: "get",
+      headers: this.headers,
+      muteHttpExceptions: true,
+      followRedirects: false
+    };
+
+    const response = UrlFetchApp.fetch(this.timeRecEndPoint(), options);
+
+    this.logginResponse(response);
+    this.appendCookie(response);
+    return this.collectHiddenValues(response);
+  }
+
+  private timeRecEndPoint(): string {
+    return `https://${this.domain}/self-workflow/cws/mbl/MblActInputTimeRec`;
+  }
+
   private samlLoginEndpoint(): string {
     return `https://${this.authDomain}/saml/login`;
   }
@@ -200,7 +224,7 @@ class HueClient {
   private collectHiddenValues(
     reesponse: HTTPResponse
   ): { [key: string]: string } {
-    const hiddenMatcher = /<input type=\"hidden\" name=\"(.*?)\" value=\"(.*?)\"( \/)*>/g;
+    const hiddenMatcher = /<input type=\"*hidden\"* name=\"(.*?)\" value=\"(.*?)\"( \/)*>/gi;
     const hiddens = reesponse.getContentText().match(hiddenMatcher);
     const hiddenValues: { [key: string]: string } = {};
 
@@ -209,8 +233,8 @@ class HueClient {
     }
 
     for (const hidden of hiddens) {
-      const name = hidden.match(/name=\"(.*?)\"/)[1];
-      const value = hidden.match(/value=\"(.*?)\"/)[1];
+      const name = hidden.match(/name=\"(.*?)\"/i)[1];
+      const value = hidden.match(/value=\"(.*?)\"/i)[1];
       hiddenValues[name] = value;
     }
 

@@ -25,7 +25,15 @@ const properties = PropertiesService.getScriptProperties();
 const CLIENT_ID: string = properties.getProperty("CLIENT_ID");
 const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
 const HUE_DOMAIN: string = properties.getProperty("HUE_DOMAIN");
-const hueClient: HueClient = new HueClient(HUE_DOMAIN);
+const HUE_AUTH_DOMAIN: string = properties.getProperty("HUE_AUTH_DOMAIN");
+const HUE_SAML_AUTH_REQUEST: string = properties.getProperty(
+  "HUE_SAML_AUTH_REQUEST"
+);
+const hueClient: HueClient = new HueClient(
+  HUE_DOMAIN,
+  HUE_AUTH_DOMAIN,
+  HUE_SAML_AUTH_REQUEST
+);
 let handler: OAuth2Handler;
 
 const handleCallback = (request): HtmlOutput => {
@@ -559,9 +567,9 @@ function convertHueClientErrorMessage(e: Error, user: string): string {
     case e instanceof HueClientError:
       return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
     case e instanceof NetworkAccessError:
-      return `@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
     default:
-      return `@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
   }
 }
 
