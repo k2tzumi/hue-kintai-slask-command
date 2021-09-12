@@ -28,7 +28,8 @@
     "https://slack.com/",
     "https://hooks.slack.com/",
     "https://*.company.works-hi.com/",
-    "https://*.auth.app.works-hi.com/"
+    "https://*.auth.app.works-hi.com/",
+    "https://*.netlify.app/"
   ],
   "runtimeVersion": "V8"
 }
