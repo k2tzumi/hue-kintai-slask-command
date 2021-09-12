@@ -2,7 +2,7 @@ import { Slack } from "./slack/types/index.d";
 import { OAuth2Handler } from "./OAuth2Handler";
 import { UserCredentialStore, UserCredential } from "./UserCredentialStore";
 import { SlackApiClient } from "./SlackApiClient";
-import { HueClient, HueClientError } from "./HueClient";
+import { WorksClient, WorksClientError } from "./WorksClient";
 import { SlackWebhooks } from "./SlackWebhooks";
 import { SlackHandler } from "./SlackHandler";
 import { DuplicateEventError } from "./CallbackEventHandler";
@@ -24,16 +24,10 @@ const properties = PropertiesService.getScriptProperties();
 
 const CLIENT_ID: string = properties.getProperty("CLIENT_ID");
 const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
-const HUE_DOMAIN: string = properties.getProperty("HUE_DOMAIN");
-const HUE_AUTH_DOMAIN: string = properties.getProperty("HUE_AUTH_DOMAIN");
-const HUE_SAML_AUTH_REQUEST: string = properties.getProperty(
-  "HUE_SAML_AUTH_REQUEST"
-);
-const hueClient: HueClient = new HueClient(
-  HUE_DOMAIN,
-  HUE_AUTH_DOMAIN,
-  HUE_SAML_AUTH_REQUEST
-);
+const WORKS_DOMAIN: string = properties.getProperty("WORKS_DOMAIN");
+const WORKS_PROXY_DOMAIN: string = properties.getProperty("WORKS_PROXY_DOMAIN");
+
+const worksClient = new WorksClient(WORKS_DOMAIN, WORKS_PROXY_DOMAIN);
 let handler: OAuth2Handler;
 
 const handleCallback = (request): HtmlOutput => {
@@ -293,7 +287,7 @@ const executeViewSubmission = (viewSubmission: ViewSubmission): {} => {
         PropertiesService.getUserProperties(),
         makePassphraseSeeds(viewSubmission.user.id)
       );
-      store.setUserCredential(viewSubmission.user.id, hueClient.credential);
+      store.setUserCredential(viewSubmission.user.id, worksClient.credential);
 
       const update = {
         response_action: "update",
@@ -339,9 +333,9 @@ function createCredentialModal(message: string): {} {
 }
 
 function validateViewSubmisstion(viewSubmission: ViewSubmission): {} | null {
-  hueClient.doLogin(getStateValues(viewSubmission));
+  worksClient.doLogin(getStateValues(viewSubmission));
 
-  if (hueClient.authenticated) {
+  if (worksClient.authenticated) {
     return null;
   } else {
     return {
@@ -469,13 +463,13 @@ const executeCommandStartKintai = (): void => {
       if (DEBUG) {
         startMessage = "executeCommandStartKintai";
       } else {
-        startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
+        startMessage = punch(commands.user_id, "punchin");
       }
 
       const webhook = new SlackWebhooks(commands.response_url);
       webhook.sendText(`<@${commands.user_id}>\n${startMessage}`);
     } catch (e) {
-      hueClientErrorCommandHandle(e, commands);
+      WorksClientErrorCommandHandle(e, commands);
     }
   }, "executeCommandStartKintai");
 };
@@ -488,7 +482,7 @@ const executeMentionStartKintai = (): void => {
       if (DEBUG) {
         startMessage = "executeMentionStartKintai";
       } else {
-        startMessage = punchIn(event.user, HueClient.START_SUBMIT);
+        startMessage = punch(event.user, "punchin");
       }
 
       const client = new SlackApiClient(handler.token);
@@ -498,7 +492,7 @@ const executeMentionStartKintai = (): void => {
         event.ts
       );
     } catch (e) {
-      hueClientErrorEventHandle(e, event);
+      WorksClientErrorEventHandle(e, event);
     }
   }, "executeMentionStartKintai");
 };
@@ -510,21 +504,21 @@ const executeCommandEndKintai = (): void => {
       if (DEBUG) {
         endMessage = "executeCommandEndKintai";
       } else {
-        endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
+        endMessage = punch(commands.user_id, "punchout");
       }
 
       const webhook = new SlackWebhooks(commands.response_url);
       webhook.sendText(`<@${commands.user_id}>\n${endMessage}`);
     } catch (e) {
-      hueClientErrorCommandHandle(e, commands);
+      WorksClientErrorCommandHandle(e, commands);
     }
   }, "executeCommandEndKintai");
 };
 
-function hueClientErrorCommandHandle(e: Error, commands: Commands): void {
+function WorksClientErrorCommandHandle(e: Error, commands: Commands): void {
   const webhook = new SlackWebhooks(commands.response_url);
   webhook.sendText(
-    convertHueClientErrorMessage(e, commands.user_id),
+    convertWorksClientErrorMessage(e, commands.user_id),
     null,
     "ephemeral"
   );
@@ -538,7 +532,7 @@ const executeMentionEndKintai = (): void => {
       if (DEBUG) {
         endMessage = "executeMentionEndKintai";
       } else {
-        endMessage = punchIn(event.user, HueClient.END_SUBMIT);
+        endMessage = punch(event.user, "punchout");
       }
 
       const client = new SlackApiClient(handler.token);
@@ -548,32 +542,32 @@ const executeMentionEndKintai = (): void => {
         event.ts
       );
     } catch (e) {
-      hueClientErrorEventHandle(e, event);
+      WorksClientErrorEventHandle(e, event);
     }
   }, "executeMentionEndKintai");
 };
 
-function hueClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
+function WorksClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
   const client = new SlackApiClient(handler.token);
   client.postEphemeral(
     event.channel,
-    convertHueClientErrorMessage(e, event.user),
+    convertWorksClientErrorMessage(e, event.user),
     event.user
   );
 }
 
-function convertHueClientErrorMessage(e: Error, user: string): string {
+function convertWorksClientErrorMessage(e: Error, user: string): string {
   switch (true) {
-    case e instanceof HueClientError:
-      return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+    case e instanceof WorksClientError:
+      return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     case e instanceof NetworkAccessError:
-      return `<@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     default:
-      return `<@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
   }
 }
 
-function punchIn(user: string, type: string): string {
+function punch(user: string, action: string): string {
   const store: UserCredentialStore = new UserCredentialStore(
     PropertiesService.getUserProperties(),
     makePassphraseSeeds(user)
@@ -581,7 +575,7 @@ function punchIn(user: string, type: string): string {
   const credential: UserCredential = store.getUserCredential(user);
 
   if (credential) {
-    return hueClient.doLogin(credential).punchIn(type);
+    return worksClient.doLogin(credential)[action]();
   }
 
   throw new Error(`Not exists credential. user:${user}`);
