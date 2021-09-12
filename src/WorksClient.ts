@@ -28,7 +28,7 @@ class WorksClient {
       contentType: "application/json",
       method: "post",
       muteHttpExceptions: true,
-      payload: formData,
+      payload: JSON.stringify(formData),
       followRedirects: false
     };
 
@@ -59,7 +59,7 @@ class WorksClient {
       contentType: "application/json",
       method: "post",
       muteHttpExceptions: true,
-      payload: formData,
+      payload: JSON.stringify(formData),
       followRedirects: false
     };
 
@@ -88,7 +88,7 @@ class WorksClient {
       contentType: "application/json",
       method: "post",
       muteHttpExceptions: true,
-      payload: formData,
+      payload: JSON.stringify(formData),
       followRedirects: false
     };
 
