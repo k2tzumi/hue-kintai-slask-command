@@ -27,7 +27,7 @@ const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
 const WORKS_DOMAIN: string = properties.getProperty("WORKS_DOMAIN");
 const WORKS_PROXY_DOMAIN: string = properties.getProperty("WORKS_PROXY_DOMAIN");
 
-const worksClient = new WorksClient(WORKS_DOMAIN, WORKS_PROXY_DOMAIN);
+const worksClient = new WorksClient(WORKS_PROXY_DOMAIN, WORKS_DOMAIN);
 let handler: OAuth2Handler;
 
 const handleCallback = (request): HtmlOutput => {
