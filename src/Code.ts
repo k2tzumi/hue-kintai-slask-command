@@ -463,7 +463,7 @@ const executeCommandStartKintai = (): void => {
       if (DEBUG) {
         startMessage = "executeCommandStartKintai";
       } else {
-        startMessage = punch(commands.user_id, "punchin");
+        startMessage = punch(commands.user_id, "doPunchIn");
       }
 
       const webhook = new SlackWebhooks(commands.response_url);
@@ -482,7 +482,7 @@ const executeMentionStartKintai = (): void => {
       if (DEBUG) {
         startMessage = "executeMentionStartKintai";
       } else {
-        startMessage = punch(event.user, "punchin");
+        startMessage = punch(event.user, "doPunchIn");
       }
 
       const client = new SlackApiClient(handler.token);
@@ -504,7 +504,7 @@ const executeCommandEndKintai = (): void => {
       if (DEBUG) {
         endMessage = "executeCommandEndKintai";
       } else {
-        endMessage = punch(commands.user_id, "punchout");
+        endMessage = punch(commands.user_id, "doPunchOut");
       }
 
       const webhook = new SlackWebhooks(commands.response_url);
@@ -532,7 +532,7 @@ const executeMentionEndKintai = (): void => {
       if (DEBUG) {
         endMessage = "executeMentionEndKintai";
       } else {
-        endMessage = punch(event.user, "punchout");
+        endMessage = punch(event.user, "doPunchOut");
       }
 
       const client = new SlackApiClient(handler.token);
