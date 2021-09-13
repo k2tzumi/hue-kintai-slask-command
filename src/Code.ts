@@ -575,7 +575,7 @@ function punch(user: string, action: string): string {
   const credential: UserCredential = store.getUserCredential(user);
 
   if (credential) {
-    return worksClient.doLogin(credential)[action]();
+    return worksClient[action](credential);
   }
 
   throw new Error(`Not exists credential. user:${user}`);

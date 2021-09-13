@@ -50,7 +50,7 @@ class WorksClient {
     }
   }
 
-  public doPunchIn(credential: UserCredential): { [key: string]: string } {
+  public doPunchIn(credential: UserCredential): string {
     const formData = {
       username: credential.userID,
       password: credential.password
@@ -67,7 +67,7 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
-        return JSON.parse(response.getContentText());
+        return JSON.parse(response.getContentText()).result;
       default:
         console.warn(
           `Works punch in error. endpoint: ${this.punchInEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
