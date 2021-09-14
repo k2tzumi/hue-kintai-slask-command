@@ -79,7 +79,7 @@ class WorksClient {
     }
   }
 
-  public doPunchOut(credential: UserCredential): { [key: string]: string } {
+  public doPunchOut(credential: UserCredential): string {
     const formData = {
       username: credential.userID,
       password: credential.password
@@ -96,7 +96,7 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
-        return JSON.parse(response.getContentText());
+        return JSON.parse(response.getContentText()).result;
       default:
         console.warn(
           `Works punch out error. endpoint: ${this.punchOutEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
