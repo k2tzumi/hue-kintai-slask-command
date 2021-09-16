@@ -36,7 +36,9 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
-        console.log(`response: ${response.getContentText()}`);
+      case 400:
+      case 401:
+      case 500:
         this.credential = credential;
         return this;
       default:
@@ -67,6 +69,9 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
+      case 400:
+      case 401:
+      case 500:
         return JSON.parse(response.getContentText()).result;
       default:
         console.warn(
@@ -96,6 +101,9 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
+      case 400:
+      case 401:
+      case 500:
         return JSON.parse(response.getContentText()).result;
       default:
         console.warn(
