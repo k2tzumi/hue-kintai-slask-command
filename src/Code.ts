@@ -263,7 +263,7 @@ function createConfigureView(userID: string = ""): {} {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Setting HUE Credential."
+      text: "Setting Credential"
     },
     callback_id: "save-credential",
     submit: {
@@ -277,40 +277,40 @@ function createConfigureView(userID: string = ""): {} {
 }
 
 const executeViewSubmission = (viewSubmission: ViewSubmission): {} => {
-  try {
-    const errors: {} | null = validateViewSubmisstion(viewSubmission);
+  JobBroker.enqueueAsyncJob(validateCredential, viewSubmission);
 
-    if (errors) {
-      return errors;
-    } else {
+  return {
+    response_action: "update",
+    view: createCredentialModal(
+      "少々お待ち下さい。\n認証結果はダイレクトメッセージで通知します。"
+    )
+  };
+};
+
+const validateCredential = () => {
+  initializeOAuth2Handler();
+  JobBroker.consumeAsyncJob((viewSubmission: ViewSubmission) => {
+    try {
+      postDirectMessage(viewSubmission.user.id, "認証を開始します");
+
+      worksClient.doLogin(getStateValues(viewSubmission));
+
       const store: UserCredentialStore = new UserCredentialStore(
         PropertiesService.getUserProperties(),
         makePassphraseSeeds(viewSubmission.user.id)
       );
       store.setUserCredential(viewSubmission.user.id, worksClient.credential);
 
-      const update = {
-        response_action: "update",
-        view: createCredentialModal("Credential save successfull")
-      };
+      postDirectMessage(viewSubmission.user.id, "認証保存成功");
+    } catch (e) {
+      console.warn(`Validate credential error.${e.stack}`);
 
-      return update;
+      postDirectMessage(
+        viewSubmission.user.id,
+        convertWorksClientErrorMessage(e, viewSubmission.user.id)
+      );
     }
-  } catch (e) {
-    JobBroker.enqueueAsyncJob(asyncLogging, {
-      message: e.message,
-      stack: e.stack
-    });
-
-    const failure: {} = {
-      response_action: "update",
-      view: createCredentialModal(
-        `executeViewSubmission failure.\nname: ${e.name} \nmessage: ${e.message} \nstack: ${e.stack} `
-      )
-    };
-
-    return failure;
-  }
+  }, "validateCredential");
 };
 
 function createCredentialModal(message: string): {} {
@@ -318,7 +318,7 @@ function createCredentialModal(message: string): {} {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Setting HUE Credential"
+      text: "Setting Credential"
     },
     blocks: [
       {
@@ -330,22 +330,6 @@ function createCredentialModal(message: string): {} {
       }
     ]
   };
-}
-
-function validateViewSubmisstion(viewSubmission: ViewSubmission): {} | null {
-  worksClient.doLogin(getStateValues(viewSubmission));
-
-  if (worksClient.authenticated) {
-    return null;
-  } else {
-    return {
-      response_action: "errors",
-      errors: {
-        userID: "ユーザーIDまたはパスワードが間違っています",
-        password: "ユーザーIDまたはパスワードが間違っています"
-      }
-    };
-  }
 }
 
 function getStateValues(viewSubmission: ViewSubmission): UserCredential {
@@ -369,7 +353,6 @@ const executeBlockActions = (blockActions: BlockActions): void => {
 
   try {
     const slackApiClient = new SlackApiClient(handler.token);
-
     slackApiClient.updateViews(
       createCredentialModal("Credential reset successfull"),
       blockActions.view.hash,
@@ -382,6 +365,14 @@ const executeBlockActions = (blockActions: BlockActions): void => {
     });
   }
 };
+
+function postDirectMessage(userID: string, message: string) {
+  const slackApiClient = new SlackApiClient(handler.token);
+
+  const channelID = slackApiClient.conversationsOpen([userID]);
+
+  slackApiClient.chatPostMessage(channelID, message);
+}
 
 const START_REACTION: string =
   properties.getProperty("START_REACTION") || "sunny";
@@ -559,11 +550,11 @@ function WorksClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
 function convertWorksClientErrorMessage(e: Error, user: string): string {
   switch (true) {
     case e instanceof WorksClientError:
-      return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>\n${e.message}`;
     case e instanceof NetworkAccessError:
-      return `<@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nWorksに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     default:
-      return `<@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>\n${e.stack}`;
   }
 }
 
