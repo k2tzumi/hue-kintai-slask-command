@@ -202,11 +202,21 @@ interface ChatPostMessageResponse extends Response {
   message: Message;
 }
 
+interface ChatPostEphemeralResponse extends Response {
+  message_ts: string;
+}
+
 interface ConversationsHistoryResponse extends Response {
   messages: Message[];
   has_more: boolean;
   pin_count: number;
   response_metadata: { next_cursor: string };
+}
+
+interface ConversationsOpenResponse extends Response {
+  no_op?: boolean;
+  already_open?: boolean;
+  channel: Channel;
 }
 
 interface UserResponse extends Response {
@@ -328,7 +338,14 @@ class SlackApiClient {
     return true;
   }
 
-  public postEphemeral(channel: string, text: string, user: string): void {
+  /**
+   * @see https://api.slack.com/methods/chat.postEphemeral
+   * @param {string} channel
+   * @param {string} text
+   * @param {string} user
+   * @returns {string} message_ts
+   */
+  public postEphemeral(channel: string, text: string, user: string): string {
     const endPoint = SlackApiClient.BASE_PATH + "chat.postEphemeral";
     const payload = {
       channel,
@@ -336,7 +353,10 @@ class SlackApiClient {
       user
     };
 
-    const response: Response = this.invokeAPI(endPoint, payload);
+    const response = this.invokeAPI(
+      endPoint,
+      payload
+    ) as ChatPostEphemeralResponse;
 
     if (!response.ok) {
       throw new Error(
@@ -345,6 +365,8 @@ class SlackApiClient {
         )}, payload: ${JSON.stringify(payload)}`
       );
     }
+
+    return response.message_ts;
   }
 
   /**
@@ -510,6 +532,33 @@ class SlackApiClient {
     }
 
     return response.messages;
+  }
+
+  /**
+   * @see https://api.slack.com/methods/conversations.open
+   * @param {string[]} users
+   * @returns {string} channel.id
+   */
+  public conversationsOpen(users: string[]): string {
+    const endPoint = SlackApiClient.BASE_PATH + "conversations.open";
+    const payload: Record<string, any> = {
+      users: users.join(",")
+    };
+
+    const response = this.invokeAPI(
+      endPoint,
+      payload
+    ) as ConversationsOpenResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `post message faild. response: ${JSON.stringify(
+          response
+        )}, payload: ${JSON.stringify(payload)}`
+      );
+    }
+
+    return response.channel.id;
   }
 
   public chatUpdate(
