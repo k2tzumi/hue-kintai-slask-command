@@ -26,6 +26,7 @@
   "exceptionLogging": "STACKDRIVER",
   "urlFetchWhitelist": [
     "https://slack.com/",
+    "https://api.slack.com/",
     "https://hooks.slack.com/",
     "https://*.company.works-hi.com/",
     "https://*.auth.app.works-hi.com/",
