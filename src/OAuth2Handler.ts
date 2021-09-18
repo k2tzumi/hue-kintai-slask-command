@@ -109,7 +109,7 @@ class OAuth2Handler {
   }
 
   public static readonly SCOPE =
-    "commands,chat:write,channels:history,groups:history,mpim:history,im:history";
+    "commands,chat:write,channels:history,groups:history,mpim:history,im:history,channels:manage,groups:write,im:write,mpim:write";
 
   private service: OAuth2Service;
 
