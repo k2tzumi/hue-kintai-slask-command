@@ -36,11 +36,12 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
+        this.credential = credential;
+        return this;
       case 400:
       case 401:
       case 500:
-        this.credential = credential;
-        return this;
+        throw new WorksClientError(JSON.parse(response.getContentText()).error);
       default:
         console.warn(
           `Works login error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
@@ -69,10 +70,11 @@ class WorksClient {
 
     switch (response.getResponseCode()) {
       case 200:
+        return JSON.parse(response.getContentText()).result;
       case 400:
       case 401:
       case 500:
-        return JSON.parse(response.getContentText()).result;
+        throw new WorksClientError(JSON.parse(response.getContentText()).error);
       default:
         console.warn(
           `Works punch in error. endpoint: ${this.punchInEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
