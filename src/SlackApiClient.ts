@@ -854,7 +854,7 @@ class SlackApiClient {
     }
 
     return Object.values(payload).some(
-      v => v.toString() === "Blob" && typeof v === "object"
+      v => v && v.toString() === "Blob" && typeof v === "object"
     );
   }
 
@@ -892,7 +892,7 @@ class SlackApiClient {
           break;
       }
     } catch (e) {
-      console.warn(`DNS error, etc. ${e.message}`);
+      console.warn(`Invoke api error, etc. ${e.stack}`);
       throw new NetworkAccessError(500, e.message);
     }
 
