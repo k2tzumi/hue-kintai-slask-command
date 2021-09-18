@@ -7,7 +7,10 @@ type BlockActions = Slack.Interactivity.BlockActions;
 type BlockActionsFunction = (blockActions: BlockActions) => {} | void;
 type ViewSubmission = Slack.Interactivity.ViewSubmission;
 type viewSubmissionFunction = (viewSubmission: ViewSubmission) => {};
-type InteractivityFunction = ((interaction: Interaction) => {} | void) | BlockActionsFunction | viewSubmissionFunction;
+type InteractivityFunction =
+  | ((interaction: Interaction) => {} | void)
+  | BlockActionsFunction
+  | viewSubmissionFunction;
 
 class InteractivityHandler extends SlackBaseHandler<InteractivityFunction> {
   public handle(e): { performed: boolean; output: TextOutput | null } {
