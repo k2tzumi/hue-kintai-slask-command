@@ -2,7 +2,7 @@ import { Slack } from "./slack/types/index.d";
 import { OAuth2Handler } from "./OAuth2Handler";
 import { UserCredentialStore, UserCredential } from "./UserCredentialStore";
 import { SlackApiClient } from "./SlackApiClient";
-import { HueClient, HueClientError } from "./HueClient";
+import { WorksClient, WorksClientError } from "./WorksClient";
 import { SlackWebhooks } from "./SlackWebhooks";
 import { SlackHandler } from "./SlackHandler";
 import { DuplicateEventError } from "./CallbackEventHandler";
@@ -24,8 +24,10 @@ const properties = PropertiesService.getScriptProperties();
 
 const CLIENT_ID: string = properties.getProperty("CLIENT_ID");
 const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
-const HUE_DOMAIN: string = properties.getProperty("HUE_DOMAIN");
-const hueClient: HueClient = new HueClient(HUE_DOMAIN);
+const WORKS_DOMAIN: string = properties.getProperty("WORKS_DOMAIN");
+const WORKS_PROXY_DOMAIN: string = properties.getProperty("WORKS_PROXY_DOMAIN");
+
+const worksClient = new WorksClient(WORKS_PROXY_DOMAIN, WORKS_DOMAIN);
 let handler: OAuth2Handler;
 
 const handleCallback = (request): HtmlOutput => {
@@ -261,7 +263,7 @@ function createConfigureView(userID: string = ""): {} {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Setting HUE Credential."
+      text: "Setting Credential"
     },
     callback_id: "save-credential",
     submit: {
@@ -275,40 +277,40 @@ function createConfigureView(userID: string = ""): {} {
 }
 
 const executeViewSubmission = (viewSubmission: ViewSubmission): {} => {
-  try {
-    const errors: {} | null = validateViewSubmisstion(viewSubmission);
+  JobBroker.enqueueAsyncJob(validateCredential, viewSubmission);
 
-    if (errors) {
-      return errors;
-    } else {
+  return {
+    response_action: "update",
+    view: createCredentialModal(
+      "少々お待ち下さい。\n認証結果はダイレクトメッセージで通知します。"
+    )
+  };
+};
+
+const validateCredential = () => {
+  initializeOAuth2Handler();
+  JobBroker.consumeAsyncJob((viewSubmission: ViewSubmission) => {
+    try {
+      postDirectMessage(viewSubmission.user.id, "認証を開始します");
+
+      worksClient.doLogin(getStateValues(viewSubmission));
+
       const store: UserCredentialStore = new UserCredentialStore(
         PropertiesService.getUserProperties(),
         makePassphraseSeeds(viewSubmission.user.id)
       );
-      store.setUserCredential(viewSubmission.user.id, hueClient.credential);
+      store.setUserCredential(viewSubmission.user.id, worksClient.credential);
 
-      const update = {
-        response_action: "update",
-        view: createCredentialModal("Credential save successfull")
-      };
+      postDirectMessage(viewSubmission.user.id, "認証保存成功");
+    } catch (e) {
+      console.warn(`Validate credential error.${e.stack}`);
 
-      return update;
+      postDirectMessage(
+        viewSubmission.user.id,
+        convertWorksClientErrorMessage(e, viewSubmission.user.id)
+      );
     }
-  } catch (e) {
-    JobBroker.enqueueAsyncJob(asyncLogging, {
-      message: e.message,
-      stack: e.stack
-    });
-
-    const failure: {} = {
-      response_action: "update",
-      view: createCredentialModal(
-        `executeViewSubmission failure.\nname: ${e.name} \nmessage: ${e.message} \nstack: ${e.stack} `
-      )
-    };
-
-    return failure;
-  }
+  }, "validateCredential");
 };
 
 function createCredentialModal(message: string): {} {
@@ -316,7 +318,7 @@ function createCredentialModal(message: string): {} {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Setting HUE Credential"
+      text: "Setting Credential"
     },
     blocks: [
       {
@@ -328,22 +330,6 @@ function createCredentialModal(message: string): {} {
       }
     ]
   };
-}
-
-function validateViewSubmisstion(viewSubmission: ViewSubmission): {} | null {
-  hueClient.doLogin(getStateValues(viewSubmission));
-
-  if (hueClient.authenticated) {
-    return null;
-  } else {
-    return {
-      response_action: "errors",
-      errors: {
-        userID: "ユーザーIDまたはパスワードが間違っています",
-        password: "ユーザーIDまたはパスワードが間違っています"
-      }
-    };
-  }
 }
 
 function getStateValues(viewSubmission: ViewSubmission): UserCredential {
@@ -367,7 +353,6 @@ const executeBlockActions = (blockActions: BlockActions): void => {
 
   try {
     const slackApiClient = new SlackApiClient(handler.token);
-
     slackApiClient.updateViews(
       createCredentialModal("Credential reset successfull"),
       blockActions.view.hash,
@@ -380,6 +365,14 @@ const executeBlockActions = (blockActions: BlockActions): void => {
     });
   }
 };
+
+function postDirectMessage(userID: string, message: string) {
+  const slackApiClient = new SlackApiClient(handler.token);
+
+  const channelID = slackApiClient.conversationsOpen([userID]);
+
+  slackApiClient.chatPostMessage(channelID, message);
+}
 
 const START_REACTION: string =
   properties.getProperty("START_REACTION") || "sunny";
@@ -464,13 +457,13 @@ const executeCommandStartKintai = (): void => {
       if (DEBUG) {
         startMessage = "executeCommandStartKintai";
       } else {
-        startMessage = punchIn(commands.user_id, HueClient.START_SUBMIT);
+        startMessage = punch(commands.user_id, "doPunchIn");
       }
 
       const webhook = new SlackWebhooks(commands.response_url);
       webhook.sendText(`<@${commands.user_id}>\n${startMessage}`);
     } catch (e) {
-      hueClientErrorCommandHandle(e, commands);
+      WorksClientErrorCommandHandle(e, commands);
     }
   }, "executeCommandStartKintai");
 };
@@ -483,7 +476,7 @@ const executeMentionStartKintai = (): void => {
       if (DEBUG) {
         startMessage = "executeMentionStartKintai";
       } else {
-        startMessage = punchIn(event.user, HueClient.START_SUBMIT);
+        startMessage = punch(event.user, "doPunchIn");
       }
 
       const client = new SlackApiClient(handler.token);
@@ -493,7 +486,7 @@ const executeMentionStartKintai = (): void => {
         event.ts
       );
     } catch (e) {
-      hueClientErrorEventHandle(e, event);
+      WorksClientErrorEventHandle(e, event);
     }
   }, "executeMentionStartKintai");
 };
@@ -505,21 +498,21 @@ const executeCommandEndKintai = (): void => {
       if (DEBUG) {
         endMessage = "executeCommandEndKintai";
       } else {
-        endMessage = punchIn(commands.user_id, HueClient.END_SUBMIT);
+        endMessage = punch(commands.user_id, "doPunchOut");
       }
 
       const webhook = new SlackWebhooks(commands.response_url);
       webhook.sendText(`<@${commands.user_id}>\n${endMessage}`);
     } catch (e) {
-      hueClientErrorCommandHandle(e, commands);
+      WorksClientErrorCommandHandle(e, commands);
     }
   }, "executeCommandEndKintai");
 };
 
-function hueClientErrorCommandHandle(e: Error, commands: Commands): void {
+function WorksClientErrorCommandHandle(e: Error, commands: Commands): void {
   const webhook = new SlackWebhooks(commands.response_url);
   webhook.sendText(
-    convertHueClientErrorMessage(e, commands.user_id),
+    convertWorksClientErrorMessage(e, commands.user_id),
     null,
     "ephemeral"
   );
@@ -533,7 +526,7 @@ const executeMentionEndKintai = (): void => {
       if (DEBUG) {
         endMessage = "executeMentionEndKintai";
       } else {
-        endMessage = punchIn(event.user, HueClient.END_SUBMIT);
+        endMessage = punch(event.user, "doPunchOut");
       }
 
       const client = new SlackApiClient(handler.token);
@@ -543,32 +536,32 @@ const executeMentionEndKintai = (): void => {
         event.ts
       );
     } catch (e) {
-      hueClientErrorEventHandle(e, event);
+      WorksClientErrorEventHandle(e, event);
     }
   }, "executeMentionEndKintai");
 };
 
-function hueClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
+function WorksClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
   const client = new SlackApiClient(handler.token);
   client.postEphemeral(
     event.channel,
-    convertHueClientErrorMessage(e, event.user),
+    convertWorksClientErrorMessage(e, event.user),
     event.user
   );
 }
 
-function convertHueClientErrorMessage(e: Error, user: string): string {
+function convertWorksClientErrorMessage(e: Error, user: string): string {
   switch (true) {
-    case e instanceof HueClientError:
-      return `<@${user}>\nログインができませんでした。\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+    case e instanceof WorksClientError:
+      return `<@${user}>\nログインができませんでした。${e.message}\n\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     case e instanceof NetworkAccessError:
-      return `@${user}>\nHUEに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nWorksに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     default:
-      return `@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${hueClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nなにか問題が発生しました。\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>\n${e.stack}`;
   }
 }
 
-function punchIn(user: string, type: string): string {
+function punch(user: string, action: string): string {
   const store: UserCredentialStore = new UserCredentialStore(
     PropertiesService.getUserProperties(),
     makePassphraseSeeds(user)
@@ -576,7 +569,7 @@ function punchIn(user: string, type: string): string {
   const credential: UserCredential = store.getUserCredential(user);
 
   if (credential) {
-    return hueClient.doLogin(credential).punchIn(type);
+    return worksClient[action](credential);
   }
 
   throw new Error(`Not exists credential. user:${user}`);

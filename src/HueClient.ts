@@ -16,23 +16,76 @@ class HueClient {
   static readonly START_SUBMIT = "　　　出勤　　　";
   static readonly END_SUBMIT = "　　　退勤　　　";
 
-  public cookie: string;
-  public credential: UserCredential = null;
+  private cookies: { [key: string]: string };
+  private credential: UserCredential = null;
 
-  public constructor(private domain: string) {}
+  public constructor(
+    private domain: string,
+    private authDomain: string,
+    private samlRequest: string
+  ) {
+    if (this.samlRequest) {
+      this.samlRequest = `https://${this.authDomain}/saml/sso?SAMLRequest=${this.samlRequest}`;
+    }
+  }
 
   public get authenticated(): boolean {
     return this.credential !== null;
   }
 
-  public get headers(): HttpHeaders {
-    return {
-      cookie: this.cookie
+  private get headers(): HttpHeaders {
+    const headers = {
+      "User-Agent":
+        "Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_2_1 like Mac OS X; ja-jp) AppleWebKit/533.17.9 (KHTML,like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5"
     };
+    if (this.cookie) {
+      headers.cookie = this.cookie;
+    }
+
+    return headers;
+  }
+
+  private get cookie(): string | null {
+    if (this.cookies) {
+      return Object.keys(this.cookies)
+        .map(key => {
+          return `${key}=${this.cookies[key]}`;
+        })
+        .join("; ");
+    } else {
+      return null;
+    }
   }
 
   private loginEndpoint(): string {
-    return `https://${this.domain}/self-workflow/cws/mbl/MblActLogin@act=submit`;
+    return `https://${this.domain}/self-workflow/cws/mbl/MblActLogin?@REDIRECT=&@REDIRECT=&@JUMP=`;
+  }
+
+  private accessResource(): string {
+    const responses = UrlFetchApp.fetchAll([
+      {
+        method: "get",
+        followRedirects: false,
+        muteHttpExceptions: false,
+        headers: this.headers,
+        url: this.loginEndpoint()
+      }
+    ]);
+
+    const response = responses[0];
+
+    this.appendCookie(response);
+    this.logginResponse(response);
+
+    return response.getHeaders().Location;
+  }
+
+  private logginResponse(response: HTTPResponse): void {
+    console.log(
+      `responseCode: ${response.getResponseCode()}, Location: ${
+        response.getHeaders().Location
+      }, contents: ${response.getContentText()}`
+    );
   }
 
   public get punchingURLForPc(): string {
@@ -40,49 +93,152 @@ class HueClient {
   }
 
   public doLogin(credential: UserCredential): HueClient {
-    const formData = {
-      user_id: credential.userID,
-      password: credential.password,
-      submit: "　　ログイン　　",
-      shortcut_act: "",
-      shortcut_params: ""
-    };
-
-    const options: URLFetchRequestOptions = {
-      contentType: "application/x-www-form-urlencoded",
-      method: "post",
-      muteHttpExceptions: true,
-      payload: formData
-    };
-
-    let response: HTTPResponse;
-
     try {
-      response = UrlFetchApp.fetch(this.loginEndpoint(), options);
+      if (!this.samlRequest) {
+        this.samlRequest = this.accessResource();
+      }
+
+      console.log(`samlRequest: ${this.samlRequest}`);
+
+      let formData = this.authnRequest(this.samlRequest);
+      formData.username = credential.userID;
+
+      formData = this.inputName(formData);
+      formData.password = credential.password;
+
+      formData = this.inputPassword(formData);
+
+      console.log(`cookie: ${this.cookie}`);
+
+      formData = this.redirectWithSAMLart(formData);
+
+      console.log(`cookie: ${this.cookie}`);
+
+      formData = this.inputTimeRec();
+
+      console.log(`cookie: ${this.cookie}`);
+
+      this.credential = credential;
+
+      return this;
     } catch (e) {
       console.warn(`DNS error, etc. ${e.message}`);
       throw new NetworkAccessError(500, e.message);
     }
+  }
 
-    switch (response.getResponseCode()) {
-      case 200:
-        const headers = response.getAllHeaders();
-        this.cookie = this.getCookieHeaderValues(headers);
-        if (response.getContentText().indexOf("ログアウト") === -1) {
-          throw new HueClientError("login failed");
-        }
-        this.credential = credential;
+  private authnRequest(samlRequest: string): { [key: string]: string } {
+    const options: URLFetchRequestOptions = {
+      method: "get",
+      headers: this.headers,
+      muteHttpExceptions: true,
+      followRedirects: false
+    };
+    const response = UrlFetchApp.fetch(samlRequest, options);
 
-        return this;
-      default:
-        console.warn(
-          `HUE login error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
-        );
-        throw new NetworkAccessError(
-          response.getResponseCode(),
-          response.getContentText()
-        );
+    this.logginResponse(response);
+    this.appendCookie(response);
+    return this.collectHiddenValues(response);
+  }
+
+  private inputName(formData: {
+    [key: string]: string;
+  }): { [key: string]: string } {
+    const options: URLFetchRequestOptions = {
+      contentType: "application/x-www-form-urlencoded",
+      method: "post",
+      headers: this.headers,
+      muteHttpExceptions: true,
+      payload: formData,
+      followRedirects: false
+    };
+
+    const response = UrlFetchApp.fetch(this.samlLoginEndpoint(), options);
+
+    this.logginResponse(response);
+    this.appendCookie(response);
+    return this.collectHiddenValues(response);
+  }
+
+  private inputPassword(formData: {
+    [key: string]: string;
+  }): { [key: string]: string } {
+    const options: URLFetchRequestOptions = {
+      contentType: "application/x-www-form-urlencoded",
+      method: "post",
+      headers: this.headers,
+      muteHttpExceptions: true,
+      payload: formData,
+      followRedirects: false
+    };
+
+    const response = UrlFetchApp.fetch(this.samlLoginEndpoint(), options);
+
+    this.logginResponse(response);
+    this.appendCookie(response);
+    return this.collectHiddenValues(response);
+  }
+
+  private redirectWithSAMLart(formData: {
+    [key: string]: string;
+  }): { [key: string]: string } {
+    const options: URLFetchRequestOptions = {
+      contentType: "application/x-www-form-urlencoded",
+      method: "post",
+      headers: this.headers,
+      muteHttpExceptions: true,
+      payload: formData,
+      followRedirects: false
+    };
+
+    const response = UrlFetchApp.fetch(this.loginEndpoint(), options);
+
+    this.logginResponse(response);
+    this.appendCookie(response);
+    return this.collectHiddenValues(response);
+  }
+
+  private inputTimeRec(): { [key: string]: string } {
+    const options: URLFetchRequestOptions = {
+      method: "get",
+      headers: this.headers,
+      muteHttpExceptions: true,
+      followRedirects: false
+    };
+
+    const response = UrlFetchApp.fetch(this.timeRecEndPoint(), options);
+
+    this.logginResponse(response);
+    this.appendCookie(response);
+    return this.collectHiddenValues(response);
+  }
+
+  private timeRecEndPoint(): string {
+    return `https://${this.domain}/self-workflow/cws/mbl/MblActInputTimeRec`;
+  }
+
+  private samlLoginEndpoint(): string {
+    return `https://${this.authDomain}/saml/login`;
+  }
+
+  private collectHiddenValues(
+    reesponse: HTTPResponse
+  ): { [key: string]: string } {
+    const hiddenMatcher = /<input type=\"*hidden\"* name=\"(.*?)\" value=\"(.*?)\"( \/)*>/gi;
+    const hiddens = reesponse.getContentText().match(hiddenMatcher);
+    const hiddenValues: { [key: string]: string } = {};
+
+    if (hiddens === null) {
+      return {};
     }
+
+    for (const hidden of hiddens) {
+      const name = hidden.match(/name=\"(.*?)\"/i)[1];
+      const value = hidden.match(/value=\"(.*?)\"/i)[1];
+      hiddenValues[name] = value;
+    }
+
+    return hiddenValues;
   }
 
   public getHiddenValues(): { [key: string]: string } {
@@ -105,25 +261,7 @@ class HueClient {
 
     switch (response.getResponseCode()) {
       case 200:
-        const contents = response.getContentText();
-        const hiddenMatcher = /<input type=\"hidden\" name=\"(.*?)\" value=\"(.*?)\"( \/)*>/g;
-        const hiddens = contents.match(hiddenMatcher);
-        const hiddenValues: { [key: string]: string } = {};
-
-        if (hiddens === null) {
-          console.warn(
-            `view TimeRec unknown response error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
-          );
-          throw new HueClientError("unknown response");
-        }
-
-        for (const hidden of hiddens) {
-          const name = hidden.match(/name=\"(.*?)\"/)[1];
-          const value = hidden.match(/value=\"(.*?)\"/)[1];
-          hiddenValues[name] = value;
-        }
-
-        return hiddenValues;
+        return this.collectHiddenValues(response);
       default:
         console.warn(
           `view TimeRec error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
@@ -136,8 +274,9 @@ class HueClient {
   }
 
   public punchIn(type: string): string {
-    const formData = this.getHiddenValues();
-    formData.submit = type;
+    const formData = {
+      submit: type
+    };
 
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
@@ -152,6 +291,7 @@ class HueClient {
 
     try {
       response = UrlFetchApp.fetch(this.timeRecEndpoint("submit"), options);
+      this.logginResponse(response);
     } catch (e) {
       console.warn(`DNS error, etc. ${e.message}`);
       throw new NetworkAccessError(500, e.message);
@@ -185,19 +325,24 @@ class HueClient {
     return endPoint;
   }
 
-  private getCookieHeaderValues(headers: object): string {
-    let values = "";
+  private appendCookie(response: HTTPResponse): void {
+    const headers = response.getAllHeaders();
 
     if (typeof headers["Set-Cookie"] !== "undefined") {
-      const cookies =
+      const cookieValues =
         typeof headers["Set-Cookie"] === "string"
           ? [headers["Set-Cookie"]]
           : headers["Set-Cookie"];
-      for (const i in cookies)
-        values += Utilities.formatString("%s; ", cookies[i].split("; ")[0]);
-    }
+      Object.keys(cookieValues).map(key => {
+        const cookieValue = cookieValues[key].split(";")[0];
+        const [name, value] = cookieValue.split("=");
 
-    return values;
+        if (!this.cookies) {
+          this.cookies = {};
+        }
+        this.cookies[name] = value;
+      });
+    }
   }
 }
 
