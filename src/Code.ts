@@ -406,7 +406,9 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
           "hello",
           "Hello",
           "ハロー",
-          "こんにちは"
+          "こんにちは",
+          "出勤",
+          "出社"
         ].some(word => message.indexOf(word) !== -1)
       ) {
         if (
@@ -427,7 +429,8 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
           "goodbye",
           "Goodbye",
           "グッバイ",
-          "さようなら"
+          "さようなら",
+          "退勤"
         ].some(word => message.indexOf(word) !== -1)
       ) {
         if (
