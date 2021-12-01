@@ -13,7 +13,7 @@ class WorksClientError extends BaseError {
 class WorksClient {
   public credential: UserCredential = null;
 
-  public constructor(private proxyDomain: string, domain: string) {}
+  public constructor(private proxyDomain: string, private domain: string) {}
 
   public get authenticated(): boolean {
     return this.credential !== null;
