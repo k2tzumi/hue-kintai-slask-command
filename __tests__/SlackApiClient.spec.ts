@@ -24,7 +24,7 @@ describe('SlackApiClient', () => {
             response = { ok: true, scheduled_message_id: 1 };
             const actual = client.chatScheduleMessage('channel', new Date("Mon, 06 Mar 2017 21:22:23 +0000"), 'text', [{}]);
             expect(mockFetch.mock.calls[0][0]).toContain('chat.scheduleMessage');
-            expect(mockFetch.mock.calls[0][1]).toHaveProperty("payload", "{\"channel\":\"channel\",\"post_at\":1488835343,\"text\":\"text\",\"blocks\":[{}]}");
+            expect(mockFetch.mock.calls[0][1]).toHaveProperty("payload", "{\"channel\":\"channel\",\"post_at\":1488835343,\"blocks\":[{}],\"text\":\"text\"}");
             expect(actual).toBe(1);
         });
     });
