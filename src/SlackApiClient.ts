@@ -258,7 +258,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "dialog.open";
     const payload = {
       dialog,
-      trigger_id
+      trigger_id,
     };
 
     const response: Response = this.invokeAPI(endPoint, payload);
@@ -276,7 +276,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "views.open";
     const payload = {
       view: views,
-      trigger_id
+      trigger_id,
     };
 
     const response: Response = this.invokeAPI(endPoint, payload);
@@ -295,7 +295,7 @@ class SlackApiClient {
     const payload = {
       view: views,
       hash,
-      view_id
+      view_id,
     };
 
     const response: Response = this.invokeAPI(endPoint, payload);
@@ -318,7 +318,7 @@ class SlackApiClient {
     const payload = {
       channel,
       name,
-      timestamp
+      timestamp,
     };
 
     const response: Response = this.invokeAPI(endPoint, payload);
@@ -350,7 +350,7 @@ class SlackApiClient {
     const payload = {
       channel,
       text,
-      user
+      user,
     };
 
     const response = this.invokeAPI(
@@ -388,7 +388,7 @@ class SlackApiClient {
   ): string {
     const endPoint = SlackApiClient.BASE_PATH + "chat.postMessage";
     let payload: Record<string, any> = {
-      channel
+      channel,
     };
     if (thread_ts) {
       payload = { ...payload, thread_ts };
@@ -441,7 +441,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "chat.scheduleMessage";
     let payload: Record<string, any> = {
       channel,
-      post_at: Math.ceil(post_at.getTime() / 1000)
+      post_at: Math.ceil(post_at.getTime() / 1000),
     };
     if (blocks) {
       if (!text) {
@@ -477,7 +477,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "chat.deleteScheduledMessage";
     const payload = {
       channel,
-      scheduled_message_id
+      scheduled_message_id,
     };
 
     const response = this.invokeAPI(endPoint, payload);
@@ -506,7 +506,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "conversations.history";
     let payload: Record<string, any> = {
       channel,
-      inclusive: true
+      inclusive: true,
     };
     if (latest) {
       payload = { ...payload, latest };
@@ -542,7 +542,7 @@ class SlackApiClient {
   public conversationsOpen(users: string[]): string {
     const endPoint = SlackApiClient.BASE_PATH + "conversations.open";
     const payload: Record<string, any> = {
-      users: users.join(",")
+      users: users.join(","),
     };
 
     const response = this.invokeAPI(
@@ -570,7 +570,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "chat.update";
     let payload: Record<string, any> = {
       channel,
-      ts
+      ts,
     };
     if (blocks) {
       if (!text) {
@@ -600,7 +600,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "users.info";
     const payload = {
       user,
-      include_locale: true
+      include_locale: true,
     };
 
     const response = this.invokeAPI(endPoint, payload) as UserResponse;
@@ -642,7 +642,7 @@ class SlackApiClient {
       filename,
       filetype: filetype ?? file.getContentType().split("/")[1],
       title,
-      initial_comment
+      initial_comment,
     };
 
     const response = this.invokeAPI(endPoint, payload) as FileResponse;
@@ -669,7 +669,7 @@ class SlackApiClient {
   public filesSharedPublicURL(file: string): File {
     const endPoint = SlackApiClient.BASE_PATH + "files.sharedPublicURL";
     const payload = {
-      file
+      file,
     };
 
     const response = this.invokeAPI(endPoint, payload) as FileResponse;
@@ -692,7 +692,7 @@ class SlackApiClient {
   public filesInfo(file: string) {
     const endPoint = SlackApiClient.BASE_PATH + "files.info";
     const payload = {
-      file
+      file,
     };
 
     const response = this.invokeAPI(endPoint, payload);
@@ -712,7 +712,7 @@ class SlackApiClient {
     const endPoint = SlackApiClient.BASE_PATH + "conversations.info";
     const payload = {
       channel,
-      include_locale: true
+      include_locale: true,
     };
 
     const response = this.invokeAPI(endPoint, payload) as ConversationsResponse;
@@ -775,16 +775,17 @@ class SlackApiClient {
 
   private convertBlock2Text(blocks: (Block | Record<string, any>)[]): string {
     const textArray = [];
-    blocks.forEach(block => {
+    blocks.forEach((block) => {
       if (block.hasOwnProperty("type")) {
         const obj = block as Block;
         switch (obj.type) {
           case "context": {
             if (block.hasOwnProperty("elements")) {
               const contextBlock = block as ContextBlock;
-              contextBlock.elements.forEach(element => {
+              contextBlock.elements.forEach((element) => {
                 if (element.hasOwnProperty("text")) {
-                  const textCompositionObject = element as TextCompositionObject;
+                  const textCompositionObject =
+                    element as TextCompositionObject;
 
                   textArray.push(textCompositionObject.text);
                 }
@@ -811,21 +812,21 @@ class SlackApiClient {
   private postRequestHeader() {
     return {
       "content-type": "application/json; charset=UTF-8",
-      Authorization: `Bearer ${this.token}`
+      Authorization: `Bearer ${this.token}`,
     };
   }
 
   private getRequestHeader() {
     return {
       "content-type": "application/x-www-form-urlencoded",
-      Authorization: `Bearer ${this.token}`
+      Authorization: `Bearer ${this.token}`,
     };
   }
 
   private multiPartRequestHeader(boundary: string) {
     return {
       "content-type": `multipart/form-data, boundary=${boundary}`,
-      Authorization: `Bearer ${this.token}`
+      Authorization: `Bearer ${this.token}`,
     };
   }
 
@@ -842,14 +843,14 @@ class SlackApiClient {
         payload: this.createMultipartPayload(
           payload as Record<string, any>,
           boundary
-        )
+        ),
       };
     } else {
       return {
         method: "post",
         headers: this.postRequestHeader(),
         muteHttpExceptions: true,
-        payload: payload instanceof String ? payload : JSON.stringify(payload)
+        payload: payload instanceof String ? payload : JSON.stringify(payload),
       };
     }
   }
@@ -903,7 +904,7 @@ class SlackApiClient {
     }
 
     return Object.values(payload).some(
-      v => v && v.toString() === "Blob" && typeof v === "object"
+      (v) => v && v.toString() === "Blob" && typeof v === "object"
     );
   }
 
@@ -911,7 +912,7 @@ class SlackApiClient {
     const options: URLFetchRequestOptions = {
       method: "get",
       headers: this.getRequestHeader(),
-      muteHttpExceptions: true
+      muteHttpExceptions: true,
     };
 
     return options;

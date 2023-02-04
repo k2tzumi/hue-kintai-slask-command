@@ -106,7 +106,7 @@ function doPost(e: DoPost): TextOutput {
     } else {
       JobBroker.enqueueAsyncJob(asyncLogging, {
         message: exception.message,
-        stack: exception.stack
+        stack: exception.stack,
       });
       throw exception;
     }
@@ -126,7 +126,7 @@ const executeSlashCommand = (
 
   const response = {
     response_type: null,
-    text: null
+    text: null,
   };
 
   const slackApiClient = new SlackApiClient(handler.token);
@@ -182,19 +182,19 @@ function createConfigureView(userID: string = ""): {} {
         action_id: "userID",
         placeholder: {
           type: "plain_text",
-          text: "100010"
+          text: "100010",
         },
         initial_value: userID,
-        max_length: 20
+        max_length: 20,
       },
       label: {
         type: "plain_text",
-        text: "ユーザID"
+        text: "ユーザID",
       },
       hint: {
         type: "plain_text",
-        text: "ユーザIDを入力してください"
-      }
+        text: "ユーザIDを入力してください",
+      },
     },
     {
       type: "input",
@@ -204,19 +204,19 @@ function createConfigureView(userID: string = ""): {} {
         action_id: "password",
         placeholder: {
           type: "plain_text",
-          text: "*****"
+          text: "*****",
         },
-        max_length: 20
+        max_length: 20,
       },
       label: {
         type: "plain_text",
-        text: "パスワード"
+        text: "パスワード",
       },
       hint: {
         type: "plain_text",
-        text: "パスワードを入力してください"
-      }
-    }
+        text: "パスワードを入力してください",
+      },
+    },
   ];
   if (userID !== "") {
     const resetBlock: Record<string, any> = {
@@ -224,13 +224,13 @@ function createConfigureView(userID: string = ""): {} {
       block_id: "reset",
       text: {
         type: "plain_text",
-        text: "パスワードを更新します。\n削除する場合はResetを押してください。"
+        text: "パスワードを更新します。\n削除する場合はResetを押してください。",
       },
       accessory: {
         type: "button",
         text: {
           type: "plain_text",
-          text: "Reset"
+          text: "Reset",
         },
         value: "reset",
         action_id: "reset",
@@ -238,22 +238,22 @@ function createConfigureView(userID: string = ""): {} {
         confirm: {
           title: {
             type: "plain_text",
-            text: "ユーザーIDとパスワードをリセットしても良いですか？"
+            text: "ユーザーIDとパスワードをリセットしても良いですか？",
           },
           text: {
             type: "plain_text",
-            text: "リセットすると勤怠登録ができなくなります"
+            text: "リセットすると勤怠登録ができなくなります",
           },
           confirm: {
             type: "plain_text",
-            text: "リセット"
+            text: "リセット",
           },
           deny: {
             type: "plain_text",
-            text: "やめる"
-          }
-        }
-      }
+            text: "やめる",
+          },
+        },
+      },
     };
 
     blocks = [resetBlock, ...blocks];
@@ -263,14 +263,14 @@ function createConfigureView(userID: string = ""): {} {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Setting Credential"
+      text: "Setting Credential",
     },
     callback_id: "save-credential",
     submit: {
       type: "plain_text",
-      text: userID === "" ? "Save" : "Update"
+      text: userID === "" ? "Save" : "Update",
     },
-    blocks
+    blocks,
   };
 
   return view;
@@ -283,7 +283,7 @@ const executeViewSubmission = (viewSubmission: ViewSubmission): {} => {
     response_action: "update",
     view: createCredentialModal(
       "少々お待ち下さい。\n認証結果はダイレクトメッセージで通知します。"
-    )
+    ),
   };
 };
 
@@ -318,17 +318,17 @@ function createCredentialModal(message: string): {} {
     type: "modal",
     title: {
       type: "plain_text",
-      text: "Setting Credential"
+      text: "Setting Credential",
     },
     blocks: [
       {
         type: "section",
         text: {
           type: "plain_text",
-          text: message
-        }
-      }
-    ]
+          text: message,
+        },
+      },
+    ],
   };
 }
 
@@ -337,7 +337,7 @@ function getStateValues(viewSubmission: ViewSubmission): UserCredential {
 
   const credential: UserCredential = {
     userID: values.userID.userID.value,
-    password: values.password.password.value
+    password: values.password.password.value,
   };
 
   return credential;
@@ -361,7 +361,7 @@ const executeBlockActions = (blockActions: BlockActions): void => {
   } catch (e) {
     JobBroker.enqueueAsyncJob(asyncLogging, {
       message: e.message,
-      stack: e.stack
+      stack: e.stack,
     });
   }
 };
@@ -401,8 +401,8 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
           "ハロー",
           "こんにちは",
           "出勤",
-          "出社"
-        ].some(word => message.indexOf(word) !== -1)
+          "出社",
+        ].some((word) => message.indexOf(word) !== -1)
       ) {
         if (
           slackApiClient.addReactions(event.channel, START_REACTION, event.ts)
@@ -423,8 +423,8 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
           "Goodbye",
           "グッバイ",
           "さようなら",
-          "退勤"
-        ].some(word => message.indexOf(word) !== -1)
+          "退勤",
+        ].some((word) => message.indexOf(word) !== -1)
       ) {
         if (
           slackApiClient.addReactions(event.channel, END_REACTION, event.ts)

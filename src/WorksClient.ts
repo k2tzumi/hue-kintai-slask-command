@@ -22,14 +22,14 @@ class WorksClient {
   public doLogin(credential: UserCredential): WorksClient {
     const formData = {
       username: credential.userID,
-      password: credential.password
+      password: credential.password,
     };
     const options: URLFetchRequestOptions = {
       contentType: "application/json",
       method: "post",
       muteHttpExceptions: true,
       payload: JSON.stringify(formData),
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.loginEndpoint(), options);
@@ -56,14 +56,14 @@ class WorksClient {
   public doPunchIn(credential: UserCredential): string {
     const formData = {
       username: credential.userID,
-      password: credential.password
+      password: credential.password,
     };
     const options: URLFetchRequestOptions = {
       contentType: "application/json",
       method: "post",
       muteHttpExceptions: true,
       payload: JSON.stringify(formData),
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.punchInEndpoint(), options);
@@ -89,14 +89,14 @@ class WorksClient {
   public doPunchOut(credential: UserCredential): string {
     const formData = {
       username: credential.userID,
-      password: credential.password
+      password: credential.password,
     };
     const options: URLFetchRequestOptions = {
       contentType: "application/json",
       method: "post",
       muteHttpExceptions: true,
       payload: JSON.stringify(formData),
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.punchOutEndpoint(), options);
