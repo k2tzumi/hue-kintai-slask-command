@@ -20,7 +20,7 @@ class InteractivityHandler extends SlackBaseHandler<InteractivityFunction> {
       const request = JSON.parse(payload);
       return {
         performed: true,
-        output: this.convertJSONOutput(this.bindInteractivity(request))
+        output: this.convertJSONOutput(this.bindInteractivity(request)),
       };
     }
 

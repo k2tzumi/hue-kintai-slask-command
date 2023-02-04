@@ -36,7 +36,7 @@ class HueClient {
   private get headers(): HttpHeaders {
     const headers = {
       "User-Agent":
-        "Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_2_1 like Mac OS X; ja-jp) AppleWebKit/533.17.9 (KHTML,like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5"
+        "Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_2_1 like Mac OS X; ja-jp) AppleWebKit/533.17.9 (KHTML,like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5",
     };
     if (this.cookie) {
       headers.cookie = this.cookie;
@@ -48,7 +48,7 @@ class HueClient {
   private get cookie(): string | null {
     if (this.cookies) {
       return Object.keys(this.cookies)
-        .map(key => {
+        .map((key) => {
           return `${key}=${this.cookies[key]}`;
         })
         .join("; ");
@@ -68,8 +68,8 @@ class HueClient {
         followRedirects: false,
         muteHttpExceptions: false,
         headers: this.headers,
-        url: this.loginEndpoint()
-      }
+        url: this.loginEndpoint(),
+      },
     ]);
 
     const response = responses[0];
@@ -132,7 +132,7 @@ class HueClient {
       method: "get",
       headers: this.headers,
       muteHttpExceptions: true,
-      followRedirects: false
+      followRedirects: false,
     };
     const response = UrlFetchApp.fetch(samlRequest, options);
 
@@ -141,16 +141,16 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private inputName(formData: {
+  private inputName(formData: { [key: string]: string }): {
     [key: string]: string;
-  }): { [key: string]: string } {
+  } {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "post",
       headers: this.headers,
       muteHttpExceptions: true,
       payload: formData,
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.samlLoginEndpoint(), options);
@@ -160,16 +160,16 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private inputPassword(formData: {
+  private inputPassword(formData: { [key: string]: string }): {
     [key: string]: string;
-  }): { [key: string]: string } {
+  } {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "post",
       headers: this.headers,
       muteHttpExceptions: true,
       payload: formData,
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.samlLoginEndpoint(), options);
@@ -179,16 +179,16 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private redirectWithSAMLart(formData: {
+  private redirectWithSAMLart(formData: { [key: string]: string }): {
     [key: string]: string;
-  }): { [key: string]: string } {
+  } {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "post",
       headers: this.headers,
       muteHttpExceptions: true,
       payload: formData,
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.loginEndpoint(), options);
@@ -203,7 +203,7 @@ class HueClient {
       method: "get",
       headers: this.headers,
       muteHttpExceptions: true,
-      followRedirects: false
+      followRedirects: false,
     };
 
     const response = UrlFetchApp.fetch(this.timeRecEndPoint(), options);
@@ -221,10 +221,11 @@ class HueClient {
     return `https://${this.authDomain}/saml/login`;
   }
 
-  private collectHiddenValues(
-    reesponse: HTTPResponse
-  ): { [key: string]: string } {
-    const hiddenMatcher = /<input type=\"*hidden\"* name=\"(.*?)\" value=\"(.*?)\"( \/)*>/gi;
+  private collectHiddenValues(reesponse: HTTPResponse): {
+    [key: string]: string;
+  } {
+    const hiddenMatcher =
+      /<input type=\"*hidden\"* name=\"(.*?)\" value=\"(.*?)\"( \/)*>/gi;
     const hiddens = reesponse.getContentText().match(hiddenMatcher);
     const hiddenValues: { [key: string]: string } = {};
 
@@ -247,7 +248,7 @@ class HueClient {
       method: "get",
       headers: this.headers,
       muteHttpExceptions: true,
-      followRedirects: false
+      followRedirects: false,
     };
 
     let response: HTTPResponse;
@@ -275,7 +276,7 @@ class HueClient {
 
   public punchIn(type: string): string {
     const formData = {
-      submit: type
+      submit: type,
     };
 
     const options: URLFetchRequestOptions = {
@@ -284,7 +285,7 @@ class HueClient {
       headers: this.headers,
       muteHttpExceptions: true,
       payload: formData,
-      followRedirects: false
+      followRedirects: false,
     };
 
     let response: HTTPResponse;
@@ -300,7 +301,8 @@ class HueClient {
     switch (response.getResponseCode()) {
       case 200:
         const contents = response.getContentText();
-        const messageMatcher = /<div align=\"left\" ID=\"InfoMsg\" style=\"color:#006400;\" >(.*?)<\/div>/g;
+        const messageMatcher =
+          /<div align=\"left\" ID=\"InfoMsg\" style=\"color:#006400;\" >(.*?)<\/div>/g;
         const message = contents.match(messageMatcher)[0];
 
         return message.match(/ >(.*?)<\/div>/)[1].replace("<br>", "\n");
@@ -333,7 +335,7 @@ class HueClient {
         typeof headers["Set-Cookie"] === "string"
           ? [headers["Set-Cookie"]]
           : headers["Set-Cookie"];
-      Object.keys(cookieValues).map(key => {
+      Object.keys(cookieValues).map((key) => {
         const cookieValue = cookieValues[key].split(";")[0];
         const [name, value] = cookieValue.split("=");
 
