@@ -6,11 +6,11 @@ interface UserCredential {
 }
 
 class UserCredentialStore {
-  private cipher;
+  private readonly cipher;
 
   public constructor(
-    private propertyStore: Properties,
-    private passphraseSeeds: string
+    private readonly propertyStore: Properties,
+    private readonly passphraseSeeds: string,
   ) {
     const passphrase = this.makePassphrase(passphraseSeeds);
     this.cipher = new cCryptoGS.Cipher(passphrase, "aes");
@@ -22,13 +22,13 @@ class UserCredentialStore {
     if (cryptedCredential) {
       try {
         const credentail: UserCredential = JSON.parse(
-          this.cipher.decrypt(cryptedCredential)
+          this.cipher.decrypt(cryptedCredential),
         );
 
         return credentail;
       } catch (e) {
         console.warn(
-          `Credential decrypt faild. id: ${id}, message: ${e.message}`
+          `Credential decrypt faild. id: ${id}, message: ${e.message}`,
         );
         this.removeUserCredential(id);
       }
@@ -50,7 +50,7 @@ class UserCredentialStore {
     const digest: number[] = Utilities.computeDigest(
       Utilities.DigestAlgorithm.SHA_1,
       seeds,
-      Utilities.Charset.US_ASCII
+      Utilities.Charset.US_ASCII,
     );
 
     return digest
@@ -61,4 +61,4 @@ class UserCredentialStore {
   }
 }
 
-export { UserCredential, UserCredentialStore };
+export { type UserCredential, UserCredentialStore };

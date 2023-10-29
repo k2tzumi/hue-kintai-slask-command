@@ -4,7 +4,11 @@ import { SlackBaseHandler } from "./SlackBaseHandler";
 
 type TextOutput = GoogleAppsScript.Content.TextOutput;
 type CallbackEvent = Slack.CallbackEvent.EventBase;
-type CallbackEventFunction = (event: CallbackEvent) => {} | null | void;
+type DoPost = GoogleAppsScript.Events.DoPost;
+
+type CallbackEventFunction = (
+  event: CallbackEvent,
+) => Record<never, never> | null | void;
 
 interface OuterEvent {
   token: string;
@@ -21,13 +25,13 @@ class DuplicateEventError extends BaseError {
   constructor(outerEvent: OuterEvent) {
     const { event, event_id, event_time } = outerEvent;
     super(
-      `event duplicate called. type: ${event.type}, event_id: ${event_id}, event_time: ${event_time}, event_ts: ${event.event_ts}`
+      `event duplicate called. type: ${event.type}, event_id: ${event_id}, event_time: ${event_time}, event_ts: ${event.event_ts}`,
     );
   }
 }
 
 class CallbackEventHandler extends SlackBaseHandler<CallbackEventFunction> {
-  public handle(e): { performed: boolean; output: TextOutput | null } {
+  public handle(e: DoPost): { performed: boolean; output: TextOutput | null } {
     if (e.postData) {
       const postData = JSON.parse(e.postData.getDataAsString());
 
@@ -51,7 +55,7 @@ class CallbackEventHandler extends SlackBaseHandler<CallbackEventFunction> {
     return { performed: false, output: null };
   }
 
-  private bindEvent(outerEvent: OuterEvent): {} {
+  private bindEvent(outerEvent: OuterEvent): Record<never, never> {
     const { token, event_id, event_time, event } = outerEvent;
 
     this.validateVerificationToken(token);
@@ -70,7 +74,7 @@ class CallbackEventHandler extends SlackBaseHandler<CallbackEventFunction> {
     }
 
     throw new Error(
-      `Undifine event type listner. event: ${JSON.stringify(outerEvent)}`
+      `Undifine event type listner. event: ${JSON.stringify(outerEvent)}`,
     );
   }
 }
