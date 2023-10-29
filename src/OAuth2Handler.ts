@@ -163,6 +163,10 @@ class OAuth2Handler {
     return this.service.hasAccess();
   }
 
+  public makePassphraseSeeds(seed: string): string {
+    return this.credentials.client_id + seed + this.credentials.client_secret;
+  }
+
   private getOauthAccess(code: string): OauthAccess | null {
     const formData = {
       client_id: this.credentials.client_id,

@@ -240,8 +240,6 @@ function doPost(e: DoPost): TextOutput {
   throw new Error(`No performed handler, request: ${JSON.stringify(e)}`);
 }
 
-const CLIENT_ID: string = properties.getProperty("CLIENT_ID");
-const CLIENT_SECRET: string = properties.getProperty("CLIENT_SECRET");
 const WORKS_DOMAIN: string = properties.getProperty("WORKS_DOMAIN");
 const WORKS_PROXY_DOMAIN: string = properties.getProperty("WORKS_PROXY_DOMAIN");
 
@@ -306,7 +304,8 @@ const executeSlashCommand = (
 };
 
 function makePassphraseSeeds(user_id: string): string {
-  return CLIENT_ID + user_id + CLIENT_SECRET;
+  initializeOAuth2Handler();
+  return handler.makePassphraseSeeds(user_id);
 }
 
 function createConfigureView(userID: string = ""): Record<never, never> {
@@ -732,4 +731,5 @@ export {
   doGet,
   doPost,
   jobEventHandler,
+  validateCredential,
 };
