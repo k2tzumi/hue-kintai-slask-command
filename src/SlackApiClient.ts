@@ -1,8 +1,10 @@
+import { BaseError } from "./BaseError";
 import { NetworkAccessError } from "./NetworkAccessError";
 
 type URLFetchRequestOptions = GoogleAppsScript.URL_Fetch.URLFetchRequestOptions;
 type HttpMethod = GoogleAppsScript.URL_Fetch.HttpMethod;
 type HTTPResponse = GoogleAppsScript.URL_Fetch.HTTPResponse;
+type Blob = GoogleAppsScript.Base.Blob;
 type AppsManifest = Slack.Tools.AppsManifest;
 type Credentials = Slack.Tools.Credentials;
 
@@ -58,6 +60,140 @@ interface SectionBlock extends Block {
   accessory: Record<never, never>;
 }
 
+interface User {
+  id: string;
+  team_id: string;
+  name: string;
+  deleted: boolean;
+  color: string;
+  real_name: string;
+  tz: string;
+  tz_label: string;
+  tz_offset: number;
+  profile: Record<never, never>;
+  is_admin: boolean;
+  is_owner: boolean;
+  is_primary_owner: boolean;
+  is_restricted: boolean;
+  is_ultra_restricted: boolean;
+  is_bot: boolean;
+  updated: number;
+  is_app_user: boolean;
+  has_2fa: boolean;
+  locale?: string;
+}
+
+interface Channel {
+  id: string;
+  name: string;
+  is_channel: boolean;
+  is_group: boolean;
+  is_im: boolean;
+  created: number;
+  creator: string;
+  is_archived: boolean;
+  is_general: boolean;
+  unlinked: number;
+  name_normalized: string;
+  is_read_only: boolean;
+  is_shared: boolean;
+  parent_conversation: object;
+  is_ext_shared: boolean;
+  is_org_shared: boolean;
+  pending_shared: [];
+  is_pending_ext_shared: boolean;
+  is_member: boolean;
+  is_private: boolean;
+  is_mpim: boolean;
+  last_read: string;
+  topic: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  purpose: {
+    value: string;
+    creator: string;
+    last_set: number;
+  };
+  previous_names: string[];
+  locale?: string;
+}
+
+interface File {
+  id: string;
+  created: number;
+  timestamp: number;
+  name: string;
+  title: string;
+  mimetype: string;
+  filetype: string;
+  pretty_type: string;
+  user: string;
+  editable: boolean;
+  size: number;
+  mode: string;
+  is_external: boolean;
+  external_type: string;
+  is_public: boolean;
+  public_url_shared: boolean;
+  display_as_bot: boolean;
+  username: string;
+  url_private: string;
+  url_private_download: string;
+  media_display_type?: string;
+  thumb_64?: string;
+  thumb_80?: string;
+  thumb_360?: string;
+  thumb_360_w?: number;
+  thumb_360_h?: number;
+  thumb_160?: string;
+  original_w?: number;
+  original_h?: number;
+  thumb_tiny?: string;
+  permalink: string;
+  permalink_public: string;
+  edit_link?: string;
+  preview?: string;
+  preview_highlight?: string;
+  lines?: number;
+  lines_more?: number;
+  preview_is_truncated?: boolean;
+  comments_count: number;
+  is_starred: boolean;
+  shares: {
+    public: Record<string, FileComment[]>;
+  };
+  channels: string[];
+  groups: [];
+  ims: [];
+  has_rich_preview: boolean;
+}
+
+interface FileComment {
+  reply_users: [];
+  reply_users_count: number;
+  reply_count: number;
+  ts: string;
+  channel_name: string;
+  team_id: string;
+  share_user_id: string;
+}
+
+interface Bot {
+  id: string;
+  deleted: boolean;
+  name: string;
+  updated: number;
+  app_id: string;
+  user_id: string;
+  icons: {
+    image_36: string;
+    image_48: string;
+    image_72: string;
+  };
+}
+
 interface ChatScheduleMessageResponse extends Response {
   channel: string;
   scheduled_message_id: string;
@@ -71,11 +207,33 @@ interface ChatPostMessageResponse extends Response {
   message: Message;
 }
 
+interface ChatPostEphemeralResponse extends Response {
+  message_ts: string;
+}
+
 interface ConversationsHistoryResponse extends Response {
   messages: Message[];
   has_more: boolean;
   pin_count: number;
   response_metadata: { next_cursor: string };
+}
+
+interface ConversationsOpenResponse extends Response {
+  no_op?: boolean;
+  already_open?: boolean;
+  channel: Channel;
+}
+
+interface UserResponse extends Response {
+  user: User;
+}
+
+interface ConversationsResponse extends Response {
+  channel: Channel;
+}
+
+interface FileResponse extends Response {
+  file: File;
 }
 
 interface CreateAppsManifestResponse extends Response {
@@ -134,6 +292,19 @@ interface BotsInfoResponse extends Response {
   };
 }
 
+interface BotResponse extends Response {
+  bot: Bot;
+}
+
+interface AuthTestResponse extends Response {
+  url: string;
+  team: string;
+  user: string;
+  team_id: string;
+  user_id: string;
+}
+
+class NotInChannelError extends BaseError {}
 class SlackApiClient {
   static readonly BASE_PATH = "https://slack.com/api/";
 
@@ -227,12 +398,19 @@ class SlackApiClient {
     return true;
   }
 
+  /**
+   * @see https://api.slack.com/methods/chat.postEphemeral
+   * @param {string} channel
+   * @param {string} text
+   * @param {string} user
+   * @returns {string}
+   */
   public postEphemeral(
     channel: string,
     text: string,
     user: string,
     blocks: (Block | Record<never, never>)[] | null = null,
-  ): void {
+  ): string {
     const endPoint = SlackApiClient.BASE_PATH + "chat.postEphemeral";
     let payload: Record<never, never> = {
       channel,
@@ -246,7 +424,10 @@ class SlackApiClient {
       payload = { ...payload, blocks };
     }
 
-    const response: Response = this.invokeAPI(endPoint, payload);
+    const response = this.invokeAPI(
+      endPoint,
+      payload,
+    ) as ChatPostEphemeralResponse;
 
     if (!response.ok) {
       throw new Error(
@@ -255,8 +436,20 @@ class SlackApiClient {
         )}, payload: ${JSON.stringify(payload)}`,
       );
     }
+
+    return response.message_ts;
   }
 
+  /**
+   * @see https://api.slack.com/methods/chat.postMessage
+   * @param {string} channel
+   * @param {string} text
+   * @param {string} [thread_ts]
+   * @param {{}[]} [attachments]
+   * @param {(Block | Record<string, any>)[]} [blocks]
+   * @returns {string}
+   * @throws {NotInChannelError}
+   */
   public chatPostMessage(
     channel: string,
     text: string,
@@ -299,6 +492,15 @@ class SlackApiClient {
     return response.ts;
   }
 
+  /**
+   * @see https://api.slack.com/methods/chat.scheduleMessage
+   * @param {string} channel
+   * @param {Date} post_at
+   * @param {string} text
+   * @param {(Block | Record<string, any>)[]} blocks
+   * @returns {string}
+   * @throws {NotInChannelError}
+   */
   public chatScheduleMessage(
     channel: string,
     post_at: Date,
@@ -324,6 +526,9 @@ class SlackApiClient {
     ) as ChatScheduleMessageResponse;
 
     if (!response.ok) {
+      if (response.error === "not_in_channel") {
+        throw new NotInChannelError();
+      }
       throw new Error(
         `chat schedule message faild. response: ${JSON.stringify(
           response,
@@ -398,6 +603,33 @@ class SlackApiClient {
     return response.messages;
   }
 
+  /**
+   * @see https://api.slack.com/methods/conversations.open
+   * @param {string[]} users
+   * @returns {string} channel.id
+   */
+  public conversationsOpen(users: string[]): string {
+    const endPoint = SlackApiClient.BASE_PATH + "conversations.open";
+    const payload: Record<string, any> = {
+      users: users.join(","),
+    };
+
+    const response = this.invokeAPI(
+      endPoint,
+      payload,
+    ) as ConversationsOpenResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `post message faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response.channel.id;
+  }
+
   public chatUpdate(
     channel: string,
     ts: string,
@@ -426,6 +658,188 @@ class SlackApiClient {
         )}, payload: ${JSON.stringify(payload)}`,
       );
     }
+  }
+
+  /**
+   * @see https://api.slack.com/methods/users.info
+   * @param {string} user
+   * @returns {User}
+   */
+  public usersInfo(user: string): User {
+    const endPoint = SlackApiClient.BASE_PATH + "users.info";
+    const payload = {
+      user,
+      include_locale: true,
+    };
+
+    const response = this.invokeAPI(endPoint, payload) as UserResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `users info faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response.user;
+  }
+
+  /**
+   * @see https://api.slack.com/methods/files.upload
+   * @param {string} channels
+   * @param {Blob} file
+   * @param {string} filename
+   * @param {string} filetype
+   * @param {string} title
+   * @param {string} initial_comment
+   * @returns {File}
+   * @throws {NotInChannelError}
+   */
+  public filesUpload(
+    channels: string,
+    file: Blob,
+    filename: string,
+    filetype: string,
+    title: string,
+    initial_comment: string,
+  ): File {
+    const endPoint = SlackApiClient.BASE_PATH + "files.upload";
+    const payload = {
+      channels,
+      file,
+      filename,
+      filetype: filetype ?? file.getContentType().split("/")[1],
+      title,
+      initial_comment,
+    };
+
+    const response = this.invokeAPI(endPoint, payload) as FileResponse;
+
+    if (!response.ok) {
+      if (response.error === "not_in_channel") {
+        throw new NotInChannelError();
+      }
+      throw new Error(
+        `files upload faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response.file;
+  }
+
+  /**
+   * @see https://api.slack.com/methods/files.sharedPublicURL
+   * @param {string} file
+   * @returns {File}
+   */
+  public filesSharedPublicURL(file: string): File {
+    const endPoint = SlackApiClient.BASE_PATH + "files.sharedPublicURL";
+    const payload = {
+      file,
+    };
+
+    const response = this.invokeAPI(endPoint, payload) as FileResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `files shared public URL faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response.file;
+  }
+
+  /**
+   * @see https://api.slack.com/methods/files.info
+   * @param {string} file
+   */
+  public filesInfo(file: string) {
+    const endPoint = SlackApiClient.BASE_PATH + "files.info";
+    const payload = {
+      file,
+    };
+
+    const response = this.invokeAPI(endPoint, payload);
+
+    if (!response.ok) {
+      throw new Error(
+        `files info faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response;
+  }
+
+  public conversationsInfo(channel: string): Channel {
+    const endPoint = SlackApiClient.BASE_PATH + "conversations.info";
+    const payload = {
+      channel,
+      include_locale: true,
+    };
+
+    const response = this.invokeAPI(endPoint, payload) as ConversationsResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `conversations info faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response.channel;
+  }
+
+  /**
+   * @see https://api.slack.com/methods/auth.test
+   * @returns {AuthTestResponse}
+   */
+  public authTest(): AuthTestResponse {
+    const endPoint = SlackApiClient.BASE_PATH + "auth.test";
+    const payload = {};
+
+    const response = this.invokeAPI(endPoint, payload) as AuthTestResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `auth test faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    console.log(`auth.test: ${JSON.stringify(response)}`);
+
+    return response;
+  }
+
+  /**
+   * @see https://api.slack.com/methods/bots.info
+   * @param {string} bot
+   * @returns {Bot}
+   */
+  public botsInfo(bot: string): Bot {
+    const endPoint = SlackApiClient.BASE_PATH + "bots.info";
+    const payload = { bot };
+
+    const response = this.invokeAPI(endPoint, payload) as BotResponse;
+
+    if (!response.ok) {
+      throw new Error(
+        `bots info faild. response: ${JSON.stringify(
+          response,
+        )}, payload: ${JSON.stringify(payload)}`,
+      );
+    }
+
+    return response.bot;
   }
 
   public createAppsManifest(
