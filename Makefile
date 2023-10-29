@@ -2,13 +2,15 @@
 
 CLASP = npx @google/clasp
 
+PROJECT_NAME := $(shell basename "$(CURDIR)")
+
 .PHONY: help
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' Makefile | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .clasp.json:
 	make login
-	$(CLASP) create --title mob-timer-bot --type webapp --rootDir ./src
+	$(CLASP) create --title $(PROJECT_NAME) --type webapp --rootDir ./src
 	mv src/.clasp.json .
 	$(CLASP) setting fileExtension ts
 	# $(CLASP) setting filePushOrder
