@@ -427,6 +427,8 @@ const executeViewSubmission = (
 };
 
 function validateCredential(viewSubmission: ViewSubmission): boolean {
+  initializeOAuth2Handler();
+
   try {
     postDirectMessage(viewSubmission.user.id, "認証を開始します");
 
@@ -614,6 +616,7 @@ function executeCommandStartKintai(commands: Commands): boolean {
 }
 
 function executeMentionStartKintai(event: AppMentionEvent): boolean {
+  initializeOAuth2Handler();
   let startMessage: string;
   try {
     if (DEBUG) {
@@ -660,12 +663,12 @@ function WorksClientErrorCommandHandle(e: Error, commands: Commands): void {
   webhook.sendText(
     convertWorksClientErrorMessage(e, commands.user_id),
     null,
-    // TODO:
     "ephemeral",
   );
 }
 
 function executeMentionEndKintai(event: AppMentionEvent): boolean {
+  initializeOAuth2Handler();
   let endMessage: string;
   try {
     if (DEBUG) {

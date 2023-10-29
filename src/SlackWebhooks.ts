@@ -46,13 +46,20 @@ class SlackWebhooks {
     }
   }
 
-  public sendText(text: string, thread_ts = ""): boolean {
+  public sendText(
+    text: string,
+    thread_ts = "",
+    response_type: string = "in_channel",
+  ): boolean {
     let payload: Record<never, never> = {
       text,
     };
 
     if (thread_ts !== "") {
       payload = { ...payload, thread_ts };
+    }
+    if (response_type) {
+      payload = { ...payload, response_type };
     }
 
     return this.invoke(payload);
