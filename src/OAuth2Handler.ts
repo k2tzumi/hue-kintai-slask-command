@@ -164,7 +164,7 @@ class OAuth2Handler {
   }
 
   public makePassphraseSeeds(seed: string): string {
-    return this.credentials.client_id + seed + this.credentials.client_secret;
+    return this.credentials?.client_id + seed + this.credentials?.client_secret;
   }
 
   private getOauthAccess(code: string): OauthAccess | null {

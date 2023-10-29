@@ -4,7 +4,7 @@ type Commands = Slack.SlashCommand.Commands;
 
 const properites = {
     getProperty: jest.fn(function () {
-        return 'dummy';
+        return '{}';
     }),
     deleteAllProperties: jest.fn(),
     deleteProperty: jest.fn(),
