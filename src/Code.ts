@@ -274,13 +274,16 @@ const executeSlashCommand = (
     switch (commands.text) {
       case "s":
       case "start":
-        JobBroker.enqueueAsyncJob(executeCommandStartKintai, commands);
+        JobBroker.enqueueAsyncJob<Commands>(
+          executeCommandStartKintai,
+          commands,
+        );
         response.response_type = "in_channel";
         response.text = `<@${commands.user_id}>\nおはようございます。出勤打刻します。`;
         break;
       case "e":
       case "end":
-        JobBroker.enqueueAsyncJob(executeCommandEndKintai, commands);
+        JobBroker.enqueueAsyncJob<Commands>(executeCommandEndKintai, commands);
         response.response_type = "in_channel";
         response.text = `<@${commands.user_id}>\nおつかれさまでした。退勤打刻します。`;
         break;
@@ -413,7 +416,7 @@ function createConfigureView(userID: string = ""): Record<never, never> {
 const executeViewSubmission = (
   viewSubmission: ViewSubmission,
 ): Record<never, never> => {
-  JobBroker.enqueueAsyncJob(validateCredential, viewSubmission);
+  JobBroker.enqueueAsyncJob<ViewSubmission>(validateCredential, viewSubmission);
 
   return {
     response_action: "update",
@@ -423,31 +426,30 @@ const executeViewSubmission = (
   };
 };
 
-const validateCredential = () => {
-  initializeOAuth2Handler();
-  JobBroker.consumeAsyncJob((viewSubmission: ViewSubmission) => {
-    try {
-      postDirectMessage(viewSubmission.user.id, "認証を開始します");
+function validateCredential(viewSubmission: ViewSubmission): boolean {
+  try {
+    postDirectMessage(viewSubmission.user.id, "認証を開始します");
 
-      worksClient.doLogin(getStateValues(viewSubmission));
+    worksClient.doLogin(getStateValues(viewSubmission));
 
-      const store: UserCredentialStore = new UserCredentialStore(
-        PropertiesService.getUserProperties(),
-        makePassphraseSeeds(viewSubmission.user.id),
-      );
-      store.setUserCredential(viewSubmission.user.id, worksClient.credential);
+    const store: UserCredentialStore = new UserCredentialStore(
+      PropertiesService.getUserProperties(),
+      makePassphraseSeeds(viewSubmission.user.id),
+    );
+    store.setUserCredential(viewSubmission.user.id, worksClient.credential);
 
-      postDirectMessage(viewSubmission.user.id, "認証保存成功");
-    } catch (e) {
-      console.warn(`Validate credential error.${e.stack}`);
+    postDirectMessage(viewSubmission.user.id, "認証保存成功");
+  } catch (e) {
+    console.warn(`Validate credential error.${e.stack}`);
 
-      postDirectMessage(
-        viewSubmission.user.id,
-        convertWorksClientErrorMessage(e, viewSubmission.user.id),
-      );
-    }
-  }, "validateCredential");
-};
+    postDirectMessage(
+      viewSubmission.user.id,
+      convertWorksClientErrorMessage(e, viewSubmission.user.id),
+    );
+    return false;
+  }
+  return true;
+}
 
 function createCredentialModal(message: string): Record<never, never> {
   return {
@@ -495,7 +497,7 @@ const executeBlockActions = (blockActions: BlockActions): void => {
       blockActions.view.id,
     );
   } catch (e) {
-    JobBroker.enqueueAsyncJob(asyncLogging, {
+    JobBroker.enqueueAsyncJob<Parameter>(asyncLogging, {
       message: e.message,
       stack: e.stack,
     });
@@ -543,7 +545,10 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
         if (
           slackApiClient.addReactions(event.channel, START_REACTION, event.ts)
         ) {
-          JobBroker.enqueueAsyncJob(executeMentionStartKintai, event);
+          JobBroker.enqueueAsyncJob<AppMentionEvent>(
+            executeMentionStartKintai,
+            event,
+          );
         }
         return;
       }
@@ -565,7 +570,10 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
         if (
           slackApiClient.addReactions(event.channel, END_REACTION, event.ts)
         ) {
-          JobBroker.enqueueAsyncJob(executeMentionEndKintai, event);
+          JobBroker.enqueueAsyncJob<AppMentionEvent>(
+            executeMentionEndKintai,
+            event,
+          );
         }
         return;
       }
@@ -586,96 +594,99 @@ const executeAppMentionEvent = (event: AppMentionEvent): void => {
 
 const DEBUG: boolean = false;
 
-const executeCommandStartKintai = (): void => {
-  JobBroker.consumeAsyncJob((commands: Commands) => {
-    let startMessage: string;
-    try {
-      if (DEBUG) {
-        startMessage = "executeCommandStartKintai";
-      } else {
-        startMessage = punch(commands.user_id, "doPunchIn");
-      }
-
-      const webhook = new SlackWebhooks(commands.response_url);
-      webhook.sendText(`<@${commands.user_id}>\n${startMessage}`);
-    } catch (e) {
-      WorksClientErrorCommandHandle(e, commands);
+function executeCommandStartKintai(commands: Commands): boolean {
+  let startMessage: string;
+  try {
+    if (DEBUG) {
+      startMessage = "executeCommandStartKintai";
+    } else {
+      startMessage = punch(commands.user_id, "doPunchIn");
     }
-  }, "executeCommandStartKintai");
-};
 
-const executeMentionStartKintai = (): void => {
-  initializeOAuth2Handler();
-  JobBroker.consumeAsyncJob((event: AppMentionEvent) => {
-    let startMessage: string;
-    try {
-      if (DEBUG) {
-        startMessage = "executeMentionStartKintai";
-      } else {
-        startMessage = punch(event.user, "doPunchIn");
-      }
+    const webhook = new SlackWebhooks(commands.response_url);
+    webhook.sendText(`<@${commands.user_id}>\n${startMessage}`);
+  } catch (e) {
+    WorksClientErrorCommandHandle(e, commands);
+    return false;
+  }
 
-      const client = new SlackApiClient(handler.token);
-      client.chatPostMessage(
-        event.channel,
-        `<@${event.user}>\n${startMessage}`,
-        event.ts,
-      );
-    } catch (e) {
-      WorksClientErrorEventHandle(e, event);
+  return true;
+}
+
+function executeMentionStartKintai(event: AppMentionEvent): boolean {
+  let startMessage: string;
+  try {
+    if (DEBUG) {
+      startMessage = "executeMentionStartKintai";
+    } else {
+      startMessage = punch(event.user, "doPunchIn");
     }
-  }, "executeMentionStartKintai");
-};
 
-const executeCommandEndKintai = (): void => {
-  JobBroker.consumeAsyncJob((commands: Commands) => {
-    let endMessage: string;
-    try {
-      if (DEBUG) {
-        endMessage = "executeCommandEndKintai";
-      } else {
-        endMessage = punch(commands.user_id, "doPunchOut");
-      }
+    const client = new SlackApiClient(handler.token);
+    client.chatPostMessage(
+      event.channel,
+      `<@${event.user}>\n${startMessage}`,
+      event.ts,
+    );
+  } catch (e) {
+    WorksClientErrorEventHandle(e, event);
+    return false;
+  }
 
-      const webhook = new SlackWebhooks(commands.response_url);
-      webhook.sendText(`<@${commands.user_id}>\n${endMessage}`);
-    } catch (e) {
-      WorksClientErrorCommandHandle(e, commands);
+  return true;
+}
+
+function executeCommandEndKintai(commands: Commands): boolean {
+  let endMessage: string;
+  try {
+    if (DEBUG) {
+      endMessage = "executeCommandEndKintai";
+    } else {
+      endMessage = punch(commands.user_id, "doPunchOut");
     }
-  }, "executeCommandEndKintai");
-};
+
+    const webhook = new SlackWebhooks(commands.response_url);
+    webhook.sendText(`<@${commands.user_id}>\n${endMessage}`);
+  } catch (e) {
+    WorksClientErrorCommandHandle(e, commands);
+    return false;
+  }
+
+  return true;
+}
 
 function WorksClientErrorCommandHandle(e: Error, commands: Commands): void {
   const webhook = new SlackWebhooks(commands.response_url);
   webhook.sendText(
     convertWorksClientErrorMessage(e, commands.user_id),
     null,
+    // TODO:
     "ephemeral",
   );
 }
 
-const executeMentionEndKintai = (): void => {
-  initializeOAuth2Handler();
-  JobBroker.consumeAsyncJob((event: AppMentionEvent) => {
-    let endMessage: string;
-    try {
-      if (DEBUG) {
-        endMessage = "executeMentionEndKintai";
-      } else {
-        endMessage = punch(event.user, "doPunchOut");
-      }
-
-      const client = new SlackApiClient(handler.token);
-      client.chatPostMessage(
-        event.channel,
-        `<@${event.user}>\n${endMessage}`,
-        event.ts,
-      );
-    } catch (e) {
-      WorksClientErrorEventHandle(e, event);
+function executeMentionEndKintai(event: AppMentionEvent): boolean {
+  let endMessage: string;
+  try {
+    if (DEBUG) {
+      endMessage = "executeMentionEndKintai";
+    } else {
+      endMessage = punch(event.user, "doPunchOut");
     }
-  }, "executeMentionEndKintai");
-};
+
+    const client = new SlackApiClient(handler.token);
+    client.chatPostMessage(
+      event.channel,
+      `<@${event.user}>\n${endMessage}`,
+      event.ts,
+    );
+  } catch (e) {
+    WorksClientErrorEventHandle(e, event);
+    return false;
+  }
+
+  return true;
+}
 
 function WorksClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
   const client = new SlackApiClient(handler.token);
