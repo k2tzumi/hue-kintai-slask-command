@@ -28,6 +28,7 @@ declare namespace Slack {
         };
         org_deploy_enabled?: boolean;
         socket_mode_enabled?: boolean;
+        token_rotation_enabled?: boolean;
       };
       features?: {
         app_home?: {

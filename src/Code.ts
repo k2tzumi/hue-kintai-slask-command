@@ -153,22 +153,22 @@ function createAppsManifest(
 ): AppsManifest {
   const appsManifest = {
     display_information: {
-      name: "mob-timer-bot",
+      name: "hue-kintai-bot",
     },
   } as AppsManifest;
 
   if (redirectUrls.length !== 0 && requestUrl !== "") {
     appsManifest.features = {
       bot_user: {
-        display_name: "mobtimerbot",
+        display_name: "hue-kintai-bot",
         always_online: false,
       },
       slash_commands: [
         {
-          command: "/mob",
+          command: "/kintai",
           url: requestUrl,
-          description: "Mob programming timer",
-          usage_hint: "[n minitues][@user1 @user2]",
+          description: "HUE attendance command",
+          usage_hint: "[start|end|config]",
           should_escape: false,
         },
       ],
@@ -190,6 +190,9 @@ function createAppsManifest(
         is_enabled: true,
         request_url: requestUrl,
       },
+      org_deploy_enabled: false,
+      socket_mode_enabled: false,
+      token_rotation_enabled: false
     };
   }
 
