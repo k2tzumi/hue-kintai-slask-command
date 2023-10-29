@@ -192,7 +192,7 @@ function createAppsManifest(
       },
       org_deploy_enabled: false,
       socket_mode_enabled: false,
-      token_rotation_enabled: false
+      token_rotation_enabled: false,
     };
   }
 
