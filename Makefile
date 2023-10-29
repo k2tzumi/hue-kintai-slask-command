@@ -14,7 +14,7 @@ help:
 	mv src/.clasp.json .
 	$(CLASP) setting fileExtension ts
 	# $(CLASP) setting filePushOrder
-	sed -i -e 's/}/,"filePushOrder":["src\/OAuth2Handler.ts","src\/SlackBaseHandler.ts","src\/BaseError.ts"]}/' .clasp.json
+	sed -i -e 's/}/,"filePushOrder":["src\/OAuth2Handler.ts","src\/SlackBaseHandler.ts","src\/BaseError.ts","src\/WorksClient.ts"]}/' .clasp.json
 	rm -f .clasp.json-e
 
 node_modules:
