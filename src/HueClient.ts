@@ -1,4 +1,4 @@
-import { UserCredential } from "./UserCredentialStore";
+import { type UserCredential } from "./UserCredentialStore";
 import { NetworkAccessError } from "./NetworkAccessError";
 import { BaseError } from "./BaseError";
 
@@ -7,7 +7,10 @@ type HTTPResponse = GoogleAppsScript.URL_Fetch.HTTPResponse;
 type HttpHeaders = GoogleAppsScript.URL_Fetch.HttpHeaders;
 
 class HueClientError extends BaseError {
-  constructor(public message: string, e?: string) {
+  constructor(
+    public message: string,
+    e?: string,
+  ) {
     super(e);
   }
 }
@@ -16,13 +19,13 @@ class HueClient {
   static readonly START_SUBMIT = "　　　出勤　　　";
   static readonly END_SUBMIT = "　　　退勤　　　";
 
-  private cookies: { [key: string]: string };
+  private cookies: Record<string, string>;
   private credential: UserCredential = null;
 
   public constructor(
-    private domain: string,
-    private authDomain: string,
-    private samlRequest: string
+    private readonly domain: string,
+    private readonly authDomain: string,
+    private samlRequest: string,
   ) {
     if (this.samlRequest) {
       this.samlRequest = `https://${this.authDomain}/saml/sso?SAMLRequest=${this.samlRequest}`;
@@ -35,11 +38,12 @@ class HueClient {
 
   private get headers(): HttpHeaders {
     const headers = {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       "User-Agent":
         "Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_2_1 like Mac OS X; ja-jp) AppleWebKit/533.17.9 (KHTML,like Gecko) Version/5.0.2 Mobile/8C148a Safari/6533.18.5",
     };
     if (this.cookie) {
-      headers.cookie = this.cookie;
+      headers["cookie"] = this.cookie;
     }
 
     return headers;
@@ -84,7 +88,7 @@ class HueClient {
     console.log(
       `responseCode: ${response.getResponseCode()}, Location: ${
         response.getHeaders().Location
-      }, contents: ${response.getContentText()}`
+      }, contents: ${response.getContentText()}`,
     );
   }
 
@@ -127,7 +131,7 @@ class HueClient {
     }
   }
 
-  private authnRequest(samlRequest: string): { [key: string]: string } {
+  private authnRequest(samlRequest: string): Record<string, string> {
     const options: URLFetchRequestOptions = {
       method: "get",
       headers: this.headers,
@@ -141,9 +145,7 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private inputName(formData: { [key: string]: string }): {
-    [key: string]: string;
-  } {
+  private inputName(formData: Record<string, string>): Record<string, string> {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "post",
@@ -160,9 +162,9 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private inputPassword(formData: { [key: string]: string }): {
-    [key: string]: string;
-  } {
+  private inputPassword(
+    formData: Record<string, string>,
+  ): Record<string, string> {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "post",
@@ -179,9 +181,9 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private redirectWithSAMLart(formData: { [key: string]: string }): {
-    [key: string]: string;
-  } {
+  private redirectWithSAMLart(
+    formData: Record<string, string>,
+  ): Record<string, string> {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "post",
@@ -198,7 +200,7 @@ class HueClient {
     return this.collectHiddenValues(response);
   }
 
-  private inputTimeRec(): { [key: string]: string } {
+  private inputTimeRec(): Record<string, string> {
     const options: URLFetchRequestOptions = {
       method: "get",
       headers: this.headers,
@@ -221,13 +223,11 @@ class HueClient {
     return `https://${this.authDomain}/saml/login`;
   }
 
-  private collectHiddenValues(reesponse: HTTPResponse): {
-    [key: string]: string;
-  } {
+  private collectHiddenValues(reesponse: HTTPResponse): Record<string, string> {
     const hiddenMatcher =
       /<input type=\"*hidden\"* name=\"(.*?)\" value=\"(.*?)\"( \/)*>/gi;
     const hiddens = reesponse.getContentText().match(hiddenMatcher);
-    const hiddenValues: { [key: string]: string } = {};
+    const hiddenValues: Record<string, string> = {};
 
     if (hiddens === null) {
       return {};
@@ -242,7 +242,7 @@ class HueClient {
     return hiddenValues;
   }
 
-  public getHiddenValues(): { [key: string]: string } {
+  public getHiddenValues(): Record<string, string> {
     const options: URLFetchRequestOptions = {
       contentType: "application/x-www-form-urlencoded",
       method: "get",
@@ -265,11 +265,11 @@ class HueClient {
         return this.collectHiddenValues(response);
       default:
         console.warn(
-          `view TimeRec error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          `view TimeRec error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`,
         );
         throw new NetworkAccessError(
           response.getResponseCode(),
-          response.getContentText()
+          response.getContentText(),
         );
     }
   }
@@ -308,11 +308,11 @@ class HueClient {
         return message.match(/ >(.*?)<\/div>/)[1].replace("<br>", "\n");
       default:
         console.warn(
-          `punchIn error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          `punchIn error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`,
         );
         throw new NetworkAccessError(
           response.getResponseCode(),
-          response.getContentText()
+          response.getContentText(),
         );
     }
   }
