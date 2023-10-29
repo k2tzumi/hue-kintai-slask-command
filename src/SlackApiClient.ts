@@ -481,6 +481,9 @@ class SlackApiClient {
     ) as ChatPostMessageResponse;
 
     if (!response.ok) {
+      if (response.error === "not_in_channel") {
+        throw new NotInChannelError();
+      }
       console.info(`post message faild. response: ${JSON.stringify(response)}`);
       throw new Error(
         `post message faild. response: ${JSON.stringify(
@@ -1034,17 +1037,39 @@ class SlackApiClient {
     };
   }
 
+  private multiPartRequestHeader(boundary: string) {
+    return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      "content-type": `multipart/form-data, boundary=${boundary}`,
+      Authorization: `Bearer ${this.token}`,
+    };
+  }
+
   private postRequestOptions(
     payload: string | Record<never, never>,
   ): URLFetchRequestOptions {
-    const options: URLFetchRequestOptions = {
-      method: "post",
-      headers: this.postRequestHeader(),
-      muteHttpExceptions: true,
-      payload: payload instanceof String ? payload : JSON.stringify(payload),
-    };
+    if (this.isFileUpload(payload)) {
+      const boundary = this.constructor.name + Utilities.getUuid();
 
-    return options;
+      return {
+        method: "post",
+        headers: this.multiPartRequestHeader(boundary),
+        muteHttpExceptions: true,
+        payload: this.createMultipartPayload(
+          payload as Record<string, any>,
+          boundary,
+        ),
+      };
+    } else {
+      const options: URLFetchRequestOptions = {
+        method: "post",
+        headers: this.postRequestHeader(),
+        muteHttpExceptions: true,
+        payload: payload instanceof String ? payload : JSON.stringify(payload),
+      };
+
+      return options;
+    }
   }
 
   private getRequestOptions(): URLFetchRequestOptions {
@@ -1101,11 +1126,66 @@ class SlackApiClient {
     }
   }
 
+  private createMultipartPayload(
+    payload: Record<string, any>,
+    boundary: string,
+  ) {
+    const parameterCount = Object.keys(payload).length;
+
+    return Object.entries(payload).reduce<number[]>(
+      (ar: number[], [k, v], i: number) => {
+        let data;
+        if (v.toString() === "Blob" && typeof v === "object") {
+          data =
+            'Content-Disposition: form-data; name="' +
+            (k || "sample" + i) +
+            '"; filename="' +
+            (v.getName() || k || "sample" + i) +
+            '"\r\n';
+          data +=
+            "Content-Type: " +
+            (v.getContentType() || "application/octet-stream") +
+            "; charset=UTF-8\r\n\r\n";
+          Array.prototype.push.apply(ar, Utilities.newBlob(data).getBytes());
+          ar = ar.concat(v.getBytes());
+        } else {
+          data =
+            'Content-Disposition: form-data; name="' +
+            (k || "sample" + i) +
+            '"\r\n\r\n';
+          data += v + "\r\n";
+          Array.prototype.push.apply(ar, Utilities.newBlob(data).getBytes());
+        }
+
+        Array.prototype.push.apply(
+          ar,
+          Utilities.newBlob(
+            "\r\n--" + boundary + (i === parameterCount - 1 ? "--" : "\r\n"),
+          ).getBytes(),
+        );
+        return ar;
+      },
+      Utilities.newBlob("--" + boundary + "\r\n").getBytes(),
+    );
+  }
+
+  private isFileUpload(payload: string | Record<string, any>): boolean {
+    if (typeof payload === "string") {
+      return false;
+    }
+
+    return Object.values(payload).some(
+      (v) => v && v.toString() === "Blob" && typeof v === "object",
+    );
+  }
+
   private preferredHttpMethod(endPoint: string): HttpMethod {
     switch (true) {
       case /(.)*conversations\.history$/.test(endPoint):
+      case /(.)*users\.info$/.test(endPoint):
       case /(.)*tooling\.tokens\.rotate$/.test(endPoint):
       case /(.)*conversations\.replies$/.test(endPoint):
+      case /(.)*conversations\.info$/.test(endPoint):
       case /(.)*bots\.info$/.test(endPoint):
         return "get";
       default:
@@ -1125,4 +1205,9 @@ class SlackApiClient {
   }
 }
 
-export { SlackApiClient, ConversationsRepliesResponse };
+export {
+  SlackApiClient,
+  ConversationsRepliesResponse,
+  NotInChannelError,
+  File,
+};
