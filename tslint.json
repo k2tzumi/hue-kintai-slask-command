@@ -1,38 +1,27 @@
 {
     "compilerOptions": {
-        "target": "ES2019"
-    },
-    "defaultSeverity": "error",
-    "extends": [
-        "tslint:recommended",
-        "tslint-config-prettier"
-    ],
-    "jsRules": {},
-    "rules": {
-        "prettier": true,
-        "interface-name": [
-            false
+        "target": "es2019",
+        "module": "commonjs",
+        "lib": [
+            "es2019"
         ],
-        "no-console": [
-            false
-        ],
-        "variable-name": {
-            "options": [
-                "allow-snake-case"
-            ]
-        },
-        "max-classes-per-file": [
-            true,
-            5,
-            "exclude-class-expressions"
-        ]
+        "declaration": false,
+        "outDir": "dist",
+        "strict": true,
+        "esModuleInterop": true,
+        "sourceMap": true,
+        "moduleResolution": "node",
+        "noImplicitReturns": true,
+        "noImplicitAny": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "useUnknownInCatchVariables": true
     },
-    "rulesDirectory": [
-        "tslint-plugin-prettier"
+    "include": [
+        "src/**/*"
     ],
-    "linterOptions": {
-        "exclude": [
-            "src/**/*.d.ts"
-        ]
-    }
+    "exclude": [
+        "node_modules",
+        "dist"
+    ]
 }
