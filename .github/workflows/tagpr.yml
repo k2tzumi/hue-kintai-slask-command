@@ -1,0 +1,53 @@
+name: tagpr
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  tagpr:
+    runs-on: ubuntu-latest
+    outputs:
+      tagpr-tag: ${{ steps.tagpr.outputs.tag }}
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out source code
+        uses: actions/checkout@v3
+
+      - id: tagpr
+        name: Run tagpr
+        uses: Songmu/tagpr@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm ci
+      - run: npm install simple-git
+      - name: Trigger CI Workflow
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const refs = '${{ fromJson(steps.tagpr.outputs.pull_request).head.ref }}'
+            const { data: pullRequests } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: refs
+            });
+
+            if (pullRequests.length > 0) {
+              const pullRequest = pullRequests[0];
+              const git = require('simple-git')();
+  
+              await git.addConfig('user.name', 'GitHub Actions');
+              await git.addConfig('user.email', 'actions@github.com');
+              await git.addConfig('push.autoSetupRemote', true);
+  
+              await git.checkout(pullRequest.head.ref);
+  
+              await git.commit('Trigger synchronize event', { '--allow-empty': null });
+              
+              await git.push(['--force-with-lease']);
+            }
