@@ -447,7 +447,6 @@ function validateCredential(viewSubmission: ViewSubmission): boolean {
       viewSubmission.user.id,
       convertWorksClientErrorMessage(e, viewSubmission.user.id),
     );
-    return false;
   }
   return true;
 }
