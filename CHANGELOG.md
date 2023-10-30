@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.0.2](https://github.com/k2tzumi/hue-kintai-slask-command/compare/v0.0.1...v0.0.2) - 2023-10-30
+### Other Changes
+- Refactor settings by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/27
+- Update readme by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/29
+
 ## [v0.0.1](https://github.com/k2tzumi/hue-kintai-slask-command/commits/v0.0.1) - 2023-10-29
 ### Other Changes
 - Support app mention event. by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/1
