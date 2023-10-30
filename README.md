@@ -24,16 +24,23 @@ USAGE
 
 To use it, you need to set up Google apps scripts, and Slack API.
 
-### Install Google apps scripts
+## Steps
 
 1. Enable Google Apps Script API  
 https://script.google.com/home/usersettings
-2. make push  
-3. make deploy  
-4. Grant the necessary privileges  
-make open  
-Publish > Deploy as web app.. > Update  
-Grant access
+2. Clone this repository to your local machine.
+3. Run `make push` to install the dependencies and the necessary libraries, authenticate with Google, create a new GAS project and upload the code.
+4. Run `make deploy` to deploy the project as a web app.  
+The first time you publish it as a web application, you will need to authorize it, so please follow the steps below.
+Open the script editor. (`make open`)  
+Click Deploy > New deployment.  
+Select Web app as the deployment type.  
+Choose who can access your web app and who will execute it.  
+Click Deploy.  
+For more information, please refer to the official Google documentation.  
+https://developers.google.com/apps-script/concepts/deployments
+5. Run `make application` to open the deployed web app in your browser. Follow the instructions on the web app to install the Slack app and perform OAuth authentication. The web app will automatically upload the App manifest to Slack and configure the necessary settings for you.
+
 
 ### Register with the Slack API
 
@@ -47,10 +54,8 @@ In order to run the application and change its behavior, you need to set the fol
 
 |Property name|Required|Setting Value|Description|
 |--|--|--|--|
-|VERIFICATION_TOKEN|○|Basic Information > App Credentials > Verification Token|A token that easily authenticates the source of a hooked request|
-|CLIENT_ID|○|Basic Information > App Credentials > Client ID|Use with OAuth|
-|CLIENT_SECRET|○|Basic Information > App Credentials > Client Secret|Use with OAuth|
-|HUE_DOMAIN|○|ex) `lwi0.hue.worksap.com`, `lwi0-cws.company.works-hi.com`|Specify a domain for the the HUE MOBILE login URL.|
+|WORKS_DOMAIN|○|ex) `lwi0.hue.worksap.com`, `lwi0-cws.company.works-hi.com`|Specify a domain for the the HUE MOBILE login URL.|
+|WORKS_PROXY_DOMAIN|○|ex) `miserarenaiyo.netlify.app` |Specify the URL where you deployed [works-kintai-slask-command-netlify-functions](https://github.com/k2tzumi/works-kintai-slask-command-netlify-functions)|
 |START_REACTION|optional|defalut: sunny (:sunny:) |Set the reaction emoji for Mentored Attendance messages.|
 |END_REACTION|optional|defalut: confetti_ball (:confetti_ball:)|Set the reaction emoji for Mentored off messages.|
 
@@ -60,60 +65,21 @@ In order to run the application and change its behavior, you need to set the fol
 File > Project properties > Scirpt properties > Add row  
 Setting Property & Value
 
-### OAuth Authentication
+# How to use
 
-#### Settings OAuth & Permissions
+The usage of this bot is as follows.
 
-* Redirect URLs  
-`Add New Redirect URL` > Add Redirect URL  > `Save URLs`  
-ex) https://script.google.com/macros/s/miserarenaiyo/usercallback  
-You can check the Redirect URL in the following way. The `RedirectUri` of the displayed page.  
-`$ make application`  
-* Bot Token Scopes  
-Click `Add an OAuth Scope` to select the following permissions  
-  * [chat:write](https://api.slack.com/scopes/chat:write)
-  * [commands](https://api.slack.com/scopes/commands)
-  * [reactions:write](https://api.slack.com/scopes/reactions:write)
-  * [app_mentions:read](https://api.slack.com/scopes/app_mentions:read)
-
-* Install App to Workspace  
-You must specify a destination channel that bot can post to as an app.
-
-### Install App to Workspace
-
-1. Open web application  
-`$ make application`  
-The browser will be launched with the following URL:  
-example) https://script.google.com/macros/s/miserarenaiyo/exec  
-2. Click `Authorize.`  
-You must specify a destination channel that bot can post to as an app.
-3. Click `Allow`  
-The following message is displayed when OAuth authentication is successful  
-```
-Success!
-Setting EventSubscriptions
-Setting Slash Commands
-Setting Interactivity & Shortcuts
-```
-When prompted, click the `Setting Slash Commands` to set up an Slash Commands.  
-Thes click the `Setting Interactivity & Shortcuts` to set up an Interactivity.  
-Thes click the `Setting EventSubscriptions` to set up an Event Subscriptions.  
-
-### Settings Slash Commands
-
-* Create New Command  
-Setting Request URL.  
-example) https://script.google.com/macros/s/miserarenaiyo/exec  
-
-### Setting Interactivity & Shortcuts
-
-Turn on.  
-Setting Interactivity Request URL  
-example) https://script.google.com/macros/s/miserarenaiyo/exec
-
-### Setting Event Subscriptions  
-Turn on.  
-Setting Request URL.  
-example) https://script.google.com/macros/s/miserarenaiyo/exec  
-Add Workspace Event.   
-Select `app_mention`.
+1. Invite bots to your channel (e.g. /invite @hue-kintai-bot)
+2. Register works authentication  
+Enter your user ID and password in the dialog that appears after executing the following slash command.  
+`/kintai config`
+3. Begin or end attendance  
+You can send a message with a mentions or use the slash command to register your attendance.  
+  - When you go to work with a message with a Mention  
+    ```
+    @hue-kintai-bot おはようございます。出勤します
+    ```
+  - If you use the slash command to go to work  
+    ```
+    /kintai start
+    ```
