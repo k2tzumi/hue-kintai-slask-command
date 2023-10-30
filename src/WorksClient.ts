@@ -1,11 +1,14 @@
-import { UserCredential } from "./UserCredentialStore";
+import { type UserCredential } from "./UserCredentialStore";
 import { NetworkAccessError } from "./NetworkAccessError";
 import { BaseError } from "./BaseError";
 
 type URLFetchRequestOptions = GoogleAppsScript.URL_Fetch.URLFetchRequestOptions;
 
 class WorksClientError extends BaseError {
-  constructor(public message: string, e?: string) {
+  constructor(
+    public message: string,
+    e?: string,
+  ) {
     super(e);
   }
 }
@@ -13,7 +16,10 @@ class WorksClientError extends BaseError {
 class WorksClient {
   public credential: UserCredential = null;
 
-  public constructor(private proxyDomain: string, private domain: string) {}
+  public constructor(
+    private readonly proxyDomain: string,
+    private readonly domain: string,
+  ) {}
 
   public get authenticated(): boolean {
     return this.credential !== null;
@@ -44,11 +50,11 @@ class WorksClient {
         throw new WorksClientError(JSON.parse(response.getContentText()).error);
       default:
         console.warn(
-          `Works login error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          `Works login error. endpoint: ${this.loginEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`,
         );
         throw new NetworkAccessError(
           response.getResponseCode(),
-          `contents: ${response.getContentText()}, endPoint: ${this.loginEndpoint()}`
+          `contents: ${response.getContentText()}, endPoint: ${this.loginEndpoint()}`,
         );
     }
   }
@@ -77,11 +83,11 @@ class WorksClient {
         throw new WorksClientError(JSON.parse(response.getContentText()).error);
       default:
         console.warn(
-          `Works punch in error. endpoint: ${this.punchInEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          `Works punch in error. endpoint: ${this.punchInEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`,
         );
         throw new NetworkAccessError(
           response.getResponseCode(),
-          `contents: ${response.getContentText()}, endPoint: ${this.punchInEndpoint()}`
+          `contents: ${response.getContentText()}, endPoint: ${this.punchInEndpoint()}`,
         );
     }
   }
@@ -110,11 +116,11 @@ class WorksClient {
         throw new WorksClientError(JSON.parse(response.getContentText()).error);
       default:
         console.warn(
-          `Works punch out error. endpoint: ${this.punchOutEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          `Works punch out error. endpoint: ${this.punchOutEndpoint()}, status: ${response.getResponseCode()}, content: ${response.getContentText()}`,
         );
         throw new NetworkAccessError(
           response.getResponseCode(),
-          `contents: ${response.getContentText()}, endPoint: ${this.punchOutEndpoint()}`
+          `contents: ${response.getContentText()}, endPoint: ${this.punchOutEndpoint()}`,
         );
     }
   }

@@ -1,7 +1,7 @@
 type Cache = GoogleAppsScript.Cache.Cache;
 
 class CounterCache {
-  private cache: Cache;
+  private readonly cache: Cache;
 
   public constructor() {
     this.cache = CacheService.getScriptCache();

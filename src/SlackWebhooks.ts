@@ -6,13 +6,13 @@ type HTTPResponse = GoogleAppsScript.URL_Fetch.HTTPResponse;
 class SlackWebhooks {
   public constructor(private incomingWebhookUrl: string) {}
 
-  public invoke(payload: {}): boolean {
+  public invoke(payload: Record<never, never>): boolean {
     let response: HTTPResponse;
 
     try {
       response = UrlFetchApp.fetch(
         this.incomingWebhookUrl,
-        this.requestOptions(payload)
+        this.requestOptions(payload),
       );
     } catch (e) {
       console.warn(`DNS error, etc. ${e.message}`);
@@ -31,31 +31,31 @@ class SlackWebhooks {
             return true;
           } else {
             throw new Error(
-              `unknow response. response: ${response.getContentText()}`
+              `unknow response. response: ${response.getContentText()}`,
             );
           }
         }
       default:
         console.warn(
-          `Incoming Webhook error. status: ${response.getResponseCode()}, content: ${response.getContentText()}`
+          `Incoming Webhook error. status: ${response.getResponseCode()}, content: ${response.getContentText()}`,
         );
         throw new NetworkAccessError(
           response.getResponseCode(),
-          response.getContentText()
+          response.getContentText(),
         );
     }
   }
 
   public sendText(
     text: string,
-    thread_ts: string = null,
-    response_type: string = "in_channel"
+    thread_ts = "",
+    response_type: string = "in_channel",
   ): boolean {
-    let payload: {} = {
+    let payload: Record<never, never> = {
       text,
     };
 
-    if (thread_ts) {
+    if (thread_ts !== "") {
       payload = { ...payload, thread_ts };
     }
     if (response_type) {
@@ -65,7 +65,9 @@ class SlackWebhooks {
     return this.invoke(payload);
   }
 
-  private requestOptions(payload: string | {}): URLFetchRequestOptions {
+  private requestOptions(
+    payload: string | Record<never, never>,
+  ): URLFetchRequestOptions {
     const options: URLFetchRequestOptions = {
       headers: this.requestHeader(),
       method: "post",
@@ -78,6 +80,7 @@ class SlackWebhooks {
 
   private requestHeader() {
     return {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
       "content-type": "application/json; charset=UTF-8",
     };
   }

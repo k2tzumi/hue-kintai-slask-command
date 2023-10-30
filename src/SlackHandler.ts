@@ -52,14 +52,14 @@ class SlackHandler {
 
   public addInteractivityListener(
     type: string,
-    handler: InteractivityFunction
+    handler: InteractivityFunction,
   ): void {
     this.interactivity.addListener(type, handler);
   }
 
   public addCallbackEventListener(
     type: string,
-    handler: CallbackEventFunction
+    handler: CallbackEventFunction,
   ): void {
     this.event.addListener(type, handler);
   }
