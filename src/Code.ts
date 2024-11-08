@@ -701,7 +701,7 @@ function WorksClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
 function convertWorksClientErrorMessage(e: Error, user: string): string {
   switch (true) {
     case e instanceof WorksClientError:
-      return `<@${user}>\nログインができませんでした。${e.message}\n\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nログインができませんでした。${JSON.stringify(e.message)}\n\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     case e instanceof NetworkAccessError:
       return `<@${user}>\nWorksに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     default:
