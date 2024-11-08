@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.0.3](https://github.com/k2tzumi/hue-kintai-slask-command/compare/v0.0.2...v0.0.3) - 2024-11-08
+### Other Changes
+- Bump braces from 3.0.2 to 3.0.3 by @dependabot in https://github.com/k2tzumi/hue-kintai-slask-command/pull/30
+- Version up job broker by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/32
+
 ## [v0.0.2](https://github.com/k2tzumi/hue-kintai-slask-command/compare/v0.0.1...v0.0.2) - 2023-10-30
 ### Other Changes
 - Refactor settings by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/27
