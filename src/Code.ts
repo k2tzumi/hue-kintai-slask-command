@@ -154,6 +154,10 @@ function createAppsManifest(
   const appsManifest = {
     display_information: {
       name: "hue-kintai-bot",
+      long_description:
+        "This bot performs attendance and clocking out of the attendance function of [HUE](https://www.worksap.co.jp/hues_features/), an ERP, via the bot.\nIt is developed as open source in [this repository](https://github.com/k2tzumi/hue-kintai-slask-command).",
+      description: "This bot can make HUE attendance from slack slash command.",
+      background_color: "#50afc8",
     },
   } as AppsManifest;
 
@@ -701,7 +705,11 @@ function WorksClientErrorEventHandle(e: Error, event: AppMentionEvent): void {
 function convertWorksClientErrorMessage(e: Error, user: string): string {
   switch (true) {
     case e instanceof WorksClientError:
-      return `<@${user}>\nログインができませんでした。${JSON.stringify(e.message)}\n\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
+      return `<@${user}>\nログインができませんでした。${JSON.stringify(
+        e.message,
+      )}\n\`${COMMAND} config\` で認証をやり直してください\n出退勤を手動で行う場合は<${
+        worksClient.punchingURLForPc
+      }|こちら>`;
     case e instanceof NetworkAccessError:
       return `<@${user}>\nWorksに正しくアクセスできませんでした。暫くしてやり直してみてください\n出退勤を手動で行う場合は<${worksClient.punchingURLForPc}|こちら>`;
     default:
