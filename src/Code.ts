@@ -445,7 +445,7 @@ function validateCredential(viewSubmission: ViewSubmission): boolean {
 
     postDirectMessage(viewSubmission.user.id, "認証保存成功");
   } catch (e) {
-    console.warn(`Validate credential error.${e.stack}`);
+    console.warn(`Validate credential error.${JSON.stringify(e)}`);
 
     postDirectMessage(
       viewSubmission.user.id,
