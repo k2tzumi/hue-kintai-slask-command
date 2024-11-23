@@ -339,9 +339,9 @@ class SlackApiClient {
 
     if (!response.ok) {
       throw new Error(
-        `open views faild. response: ${JSON.stringify(
+        `open views faild. response: "${JSON.stringify(
           response,
-        )}, payload: ${JSON.stringify(payload)}`,
+        )}", payload: "${JSON.stringify(payload)}"`,
       );
     }
   }
