@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.5](https://github.com/k2tzumi/hue-kintai-slask-command/compare/v0.0.4...v0.0.5) - 2024-11-23
+### Other Changes
+- Revert oauth2 version by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/36
+
 ## [v0.0.4](https://github.com/k2tzumi/hue-kintai-slask-command/compare/v0.0.3...v0.0.4) - 2024-11-23
 ### Other Changes
 - Append description to display information by @k2tzumi in https://github.com/k2tzumi/hue-kintai-slask-command/pull/34
